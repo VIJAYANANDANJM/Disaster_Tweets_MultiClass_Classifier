@@ -1,13 +1,13 @@
 import torch
 from transformers import AutoTokenizer
-from model import DeLTran15   # your model class file
-
+from .model import DeLTran15   # your model class file
+import os
 # -------------------------------
 # 1. CONFIG
 # -------------------------------
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-MODEL_PATH = "deltran15_minilm_fp32.pt"
-TOKENIZER_PATH = "modeltokenizer"
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "deltran15_minilm_fp32.pt")
+TOKENIZER_PATH = os.path.join(os.path.dirname(__file__), "modeltokenizer")
 
 # -------------------------------
 # 2. LOAD TOKENIZER
