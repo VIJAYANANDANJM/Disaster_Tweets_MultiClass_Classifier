@@ -1,0 +1,21 @@
+
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment and editor
+.env
+.env.*
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+
+
+
