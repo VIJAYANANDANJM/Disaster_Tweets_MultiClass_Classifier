@@ -64,6 +64,23 @@ The training/evaluation workflow is in `Model_Build/Build.py`. It:
 
 `Trained_Model/Explainable_AI.py` runs a forward pass to compute logits, then produces a token-level importance signal using the norm of token embeddings. `Main_Program.py` prints the top tokens (excluding special tokens) for the predicted class.
 
+## Actionable Info Extraction
+
+Actionable information is extracted after classification using rules + NER:
+
+- Locations via spaCy NER when available (`GPE`, `LOC`, `FAC`)
+- People counts via regex (e.g., `3 injured`, `2 missing`)
+- Needs and damage types via keyword lists
+- Time mentions via simple patterns (e.g., `today`, `2 hours ago`)
+
+Implementation lives in `Trained_Model/Actionable_Info.py` and is called from `Trained_Model/Main.py` for actionable labels.
+
+To run the extraction examples only:
+
+```powershell
+python Run_Actionable_Examples.py
+```
+
 ## Running the Classifier
 
 From the project root:
@@ -87,6 +104,7 @@ Typical runtime requirements:
 - `torch`
 - `transformers`
 - `pandas`
+- `spacy` (optional, improves location extraction)
 
 ## Notes
 

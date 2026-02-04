@@ -1,7 +1,8 @@
 import torch
 from transformers import AutoTokenizer
 from Explainable_AI import explain_prediction
-from model import DeLTran15   
+from Actionable_Info import extract_actionable_info
+from Model import DeLTran15   
 
 # -------------------------------
 # 1. CONFIG
@@ -61,8 +62,12 @@ def predict(text):
 # 6. TEST
 # -------------------------------
 if __name__ == "__main__":
+    actionable_labels = {0, 1, 4}
     while(True):
         text = input("Enter text to classify (or 'exit' to quit): ")
+        if text.lower() == "exit":
+            break
+
         label, confidence = predict(text)
 
         explanation, probs = explain_prediction(
@@ -79,6 +84,8 @@ if __name__ == "__main__":
         print("Predicted label:", label)
         print("Class name:", label_map[label])
         print("Confidence:", confidence)
-        if text.lower() == 'exit':
-            break
+
+        if label in actionable_labels:
+            info = extract_actionable_info(text)
+            print("Actionable info:", info)
     
