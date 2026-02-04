@@ -1,13 +1,14 @@
 import torch
 from transformers import AutoTokenizer
-from model import DeLTran15   # your model class file
+from Explainable_AI import explain_prediction
+from model import DeLTran15   
 
 # -------------------------------
 # 1. CONFIG
 # -------------------------------
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 MODEL_PATH = "deltran15_minilm_fp32.pt"
-TOKENIZER_PATH = "modeltokenizer"
+TOKENIZER_PATH = "Model_Tokenizer"
 
 # -------------------------------
 # 2. LOAD TOKENIZER
@@ -63,6 +64,17 @@ if __name__ == "__main__":
     while(True):
         text = input("Enter text to classify (or 'exit' to quit): ")
         label, confidence = predict(text)
+
+        explanation, probs = explain_prediction(
+        model,
+        tokenizer,
+        text,
+        target_class=label)
+        SPECIAL_TOKENS = {"[CLS]", "[SEP]", "[PAD]"}
+        print("\nTop influential tokens:")
+        for token, score in sorted(explanation, key=lambda x: x[1], reverse=True)[:10]:
+            if token not in SPECIAL_TOKENS:
+                print(token, ":", round(float(score), 4))
 
         print("Predicted label:", label)
         print("Class name:", label_map[label])
