@@ -1,0 +1,304 @@
+# Labeled test tweets
+# Format: <label_id><TAB><tweet_text>
+# Labels: 0=Affected Individuals, 1=Infrastructure Damage, 2=Not Humanitarian, 3=Other Information, 4=Rescue/Donation
+# Targeted realism set: approximately 87% model accuracy
+0	Flash flood in Kanpur left 8 people injured and 7 missing. Search and rescue volunteers needed urgently.
+1	Earthquake damaged the electric grid line and blocked key roads in Madurai.
+2	Had an amazing pizza for lunch today and it was delicious.
+3	Government announces new disaster relief fund for Surat. Detailed guidelines will be published soon.
+4	Relief campaign in Nashik is collecting donations of drinking water and hygiene kits.
+0	Flash flood in Miami left 18 people injured and 6 missing. Search and rescue volunteers needed urgently.
+1	Major power outage in Chennai after wildfire. Around 7024 homes are without electricity.
+2	Spent the evening enjoying a family dinner with friends.
+3	Government announces new disaster relief fund for Guwahati. Detailed guidelines will be published soon.
+4	Volunteers needed at Red Cross point to distribute medical kits and food packets.
+0	Flash flood in Jaipur left 10 people injured and 6 missing. Search and rescue volunteers needed urgently.
+1	Main bridge on State Highway 12 collapsed after landslide. Road access to Kathmandu is blocked.
+2	Beautiful weather today, perfect for a relaxing walk in the park.
+3	Authorities in Chennai confirmed coordination meetings for relief operations later today.
+4	Please donate essential supplies at relief camp for affected families.
+0	Landslide near Jaipur trapped 5 residents. Rescue teams and volunteers required now.
+1	Main bridge on National Highway 44 collapsed after landslide. Road access to Chennai is blocked.
+2	Great day at work today, everything went smoothly.
+3	Government announces new disaster relief fund for Bengaluru. Detailed guidelines will be published soon.
+4	Donation drive is open in Madurai; please contribute drinking water, hygiene kits, and blankets.
+0	Flooding in Ahmedabad affected many families; 8 injured and 1 missing. Need rescue assistance now.
+1	Elevated flyover on Bypass Road collapsed after earthquake. Road access to Visakhapatnam is blocked.
+2	Enjoying music and tea while cooking this evening.
+3	Public notice: disaster helpline numbers activated for Houston. Official updates to follow.
+4	Volunteers needed at Red Cross point to distribute clothes and food packets.
+0	Cyclone impact in Delhi: 7 injured and 2 missing. Emergency rescue operations needed immediately.
+1	Major power outage in Colombo after cyclone. Around 4058 homes are without electricity.
+2	Booked tickets for a photo walk next weekend.
+3	Public notice: disaster helpline numbers activated for Patna. Official updates to follow.
+4	Medical volunteers requested urgently at district hospital for disaster relief support.
+0	Landslide near Houston trapped 18 residents. Rescue teams and volunteers required now.
+1	Earthquake destroyed communication infrastructure near Guwahati. Repairs are required urgently.
+2	Had an amazing noodles for lunch today and it was delicious.
+3	District administration in Kolkata released an advisory and asked agencies to remain prepared.
+4	Medical volunteers requested urgently at NGO center for disaster relief support.
+0	Building collapse in Bhopal injured 7 workers. Ambulance support and blood donors needed urgently.
+1	Landslide damaged the transport corridor in Patna. Utility services are disrupted across the area.
+2	Trying a new burger recipe tonight at home.
+3	Emergency response teams are on standby in Kolkata. Situation is being monitored continuously.
+4	Relief campaign in Lahore is collecting donations of drinking water and hygiene kits.
+0	Cyclone impact in Ranchi: 19 injured and 8 missing. Emergency rescue operations needed immediately.
+1	Cloudburst destroyed electricity infrastructure near Miami. Repairs are required urgently.
+2	Had an amazing salad for lunch today and it was delicious.
+3	Authorities in Hyderabad confirmed coordination meetings for relief operations later today.
+4	Join the rescue volunteer team in Bangkok. Registration open for trained helpers.
+0	Building collapse in Ranchi injured 7 workers. Ambulance support and blood donors needed urgently.
+1	Road surface failure on Route 54 after heavy flooding. Transport routes are diverted.
+2	Booked tickets for a workout next weekend.
+3	Emergency response teams are on standby in Guwahati. Situation is being monitored continuously.
+4	Join the rescue volunteer team in Lucknow. Registration open for trained helpers.
+0	Cyclone impact in Kanpur: 11 injured and 6 missing. Emergency rescue operations needed immediately.
+1	Highway bridge on State Highway 12 collapsed after flooding. Road access to Miami is blocked.
+2	Weekend plan: cycling and good food with family.
+3	Government announces new disaster relief fund for Jaipur. Detailed guidelines will be published soon.
+4	Relief campaign in Chennai is collecting donations of drinking water and hygiene kits.
+0	Flooding in Ahmedabad affected many families; 8 injured and 8 missing. Need rescue assistance now.
+1	Cyclone destroyed communication infrastructure near Bengaluru. Repairs are required urgently.
+2	Enjoying music and tea while photography this evening.
+3	Authorities in Miami confirmed coordination meetings for relief operations later today.
+4	Relief campaign in Hanoi is collecting donations of blankets and drinking water.
+0	Flooding in Bengaluru affected many families; 6 injured and 4 missing. Need rescue assistance now.
+1	Road surface failure on Ring Road after heavy flooding. Transport routes are diverted.
+2	Booked tickets for a cricket match next weekend.
+3	Authorities in Houston confirmed coordination meetings for relief operations later today.
+4	Relief campaign in Kathmandu is collecting donations of drinking water and blankets.
+0	Building collapse in Houston injured 17 workers. Ambulance support and blood donors needed urgently.
+1	Major power outage in Jaipur after flooding. Around 8039 homes are without electricity.
+2	Spent the evening enjoying a concert with friends.
+3	Public notice: disaster helpline numbers activated for Nashik. Official updates to follow.
+4	Volunteers needed at city shelter to distribute blankets and hygiene kits.
+0	Flooding in Ranchi affected many families; 29 injured and 1 missing. Need rescue assistance now.
+1	Earthquake damaged the main roadway in Cebu. Utility services are disrupted across the area.
+2	Enjoying music and tea while jogging this evening.
+3	District administration in Pune released an advisory and asked agencies to remain prepared.
+4	Relief campaign in Delhi is collecting donations of medical kits and hygiene kits.
+0	Cyclone impact in Patna: 23 injured and 8 missing. Emergency rescue operations needed immediately.
+1	Storm surge destroyed electricity infrastructure near Manila. Repairs are required urgently.
+2	Spent the evening enjoying a beach trip with friends.
+3	Official briefing: response units in Hyderabad remain ready while conditions are monitored.
+4	Medical volunteers requested urgently at city shelter for disaster relief support.
+0	Landslide near Guwahati trapped 17 residents. Rescue teams and volunteers required now.
+1	Major power outage in Ahmedabad after storm surge. Around 3914 homes are without electricity.
+2	Trying a new noodles recipe tonight at home.
+3	Emergency response teams are on standby in Madurai. Situation is being monitored continuously.
+4	Join the rescue volunteer team in Jakarta. Registration open for trained helpers.
+0	Flash flood in Houston left 10 people injured and 8 missing. Search and rescue volunteers needed urgently.
+1	Wildfire damaged the power substation and blocked key roads in Manila.
+2	Booked tickets for a family dinner next weekend.
+3	Public notice: disaster helpline numbers activated for Chennai. Official updates to follow.
+4	Please donate essential supplies at city shelter for affected families.
+0	Flash flood in Kanpur left 17 people injured and 5 missing. Search and rescue volunteers needed urgently.
+1	Storm surge damaged the transport corridor and blocked key roads in Patna.
+2	Spent the evening enjoying a hiking trip with friends.
+3	Emergency response teams are on standby in Lucknow. Situation is being monitored continuously.
+4	Donation drive is open in Bhopal; please contribute medical kits, drinking water, and blankets.
+0	Cyclone impact in Houston: 9 injured and 2 missing. Emergency rescue operations needed immediately.
+1	Landslide destroyed communication infrastructure near Miami. Repairs are required urgently.
+2	Had an amazing burger for lunch today and it was delicious.
+3	Public advisory: avoid non-essential travel in Kanpur as heavy rainfall may intensify.
+4	Join the rescue volunteer team in Bengaluru. Registration open for trained helpers.
+0	Wildfire in Karachi displaced 17 families with 5 people missing. Urgent assistance needed.
+1	Landslide destroyed transport infrastructure near Patna. Repairs are required urgently.
+2	Weekend plan: photo walk and good food with family.
+3	Authorities in Pune continue monitoring weather conditions and issuing updates.
+4	Donation drive is open in Lucknow; please contribute drinking water, medical kits, and food packets.
+0	Wildfire in Karachi displaced 22 families with 2 people missing. Urgent assistance needed.
+1	Flooding damaged the main roadway and blocked key roads in Hyderabad.
+2	Just finished my cooking session and feeling great.
+3	Forecast note: rising river levels may affect low-lying areas around Lahore.
+4	Volunteers needed at NGO center to distribute hygiene kits and food packets.
+0	Storm surge impact near Chennai: 12 dead, 22 injured, and 6 missing residents.
+1	Cyclone destroyed communication infrastructure near Madurai. Repairs are required urgently.
+2	Just finished my gardening session and feeling great.
+3	Weather bulletin for Karachi: rising river levels likely through the night.
+4	Volunteers needed at relief camp to distribute hygiene kits and drinking water.
+0	Earthquake struck Kanpur; 9 dead and 34 injured. Families need shelter and medicine immediately.
+1	Flooding destroyed transport infrastructure near Patna. Repairs are required urgently.
+2	Booked tickets for a hiking trip next weekend.
+3	Weather bulletin for Guwahati: thunderstorms likely through the night.
+4	Please donate essential supplies at Red Cross point for affected families.
+0	Cloudburst in Guwahati displaced 57 families with 8 people missing. Urgent assistance needed.
+1	Major power outage in Ahmedabad after earthquake. Around 4049 homes are without electricity.
+2	Enjoying music and tea while gardening this evening.
+3	Weather bulletin for Houston: thunderstorms likely through the night.
+4	Please donate essential supplies at community hall for affected families.
+0	After wildfire in Kanpur, 13 residents were injured and 7 trapped in debris.
+1	Earthquake destroyed communication infrastructure near Jakarta. Repairs are required urgently.
+2	Enjoying music and tea while gaming this evening.
+3	Authorities in Surat continue monitoring weather conditions and issuing updates.
+4	Relief campaign in Lahore is collecting donations of clothes and food packets.
+0	Wildfire in Jakarta caused 10 injuries. Ambulances and doctors are urgently required.
+1	Road surface failure on Highway 8 after heavy flash flood. Transport routes are diverted.
+2	Spent the evening enjoying a photo walk with friends.
+3	Weather bulletin for Patna: heavy rainfall likely through the night.
+4	Donation drive is open in Jaipur; please contribute blankets, food packets, and drinking water.
+0	Wildfire in Chennai caused 13 injuries. Ambulances and doctors are urgently required.
+1	Cloudburst destroyed water supply infrastructure near Ahmedabad. Repairs are required urgently.
+2	Spent the evening enjoying a movie with friends.
+3	Forecast note: strong winds may affect low-lying areas around Bengaluru.
+4	Volunteers needed at district hospital to distribute hygiene kits and drinking water.
+0	Earthquake struck Miami; 6 dead and 11 injured. Families need shelter and medicine immediately.
+1	Cyclone damaged the transport corridor and blocked key roads in Kanpur.
+2	Weekend plan: cricket match and good food with family.
+3	Public advisory: avoid non-essential travel in Lucknow as heavy rainfall may intensify.
+4	Join the rescue volunteer team in Ahmedabad. Registration open for trained helpers.
+0	After flooding in Karachi, 30 residents were injured and 10 trapped in debris.
+1	Road surface failure on State Highway 12 after heavy wildfire. Transport routes are diverted.
+2	Weekend plan: movie and good food with family.
+3	Forecast note: rising river levels may affect low-lying areas around Jakarta.
+4	Medical volunteers requested urgently at relief camp for disaster relief support.
+0	Cloudburst impact near Delhi: 12 dead, 6 injured, and 4 missing residents.
+1	Road surface failure on State Highway 12 after heavy landslide. Transport routes are diverted.
+2	Booked tickets for a beach trip next weekend.
+3	Public advisory: avoid non-essential travel in Guwahati as thunderstorms may intensify.
+4	Relief campaign in Jakarta is collecting donations of medical kits and clothes.
+0	Flash flood struck Patna; 8 dead and 33 injured. Families need shelter and medicine immediately.
+1	Wildfire destroyed transport infrastructure near Jakarta. Repairs are required urgently.
+2	Spent the evening enjoying a shopping with friends.
+3	Authorities in Delhi continue monitoring weather conditions and issuing updates.
+4	Relief campaign in Bangkok is collecting donations of medical kits and food packets.
+0	Cyclone impact near Chennai: 6 dead, 21 injured, and 6 missing residents.
+1	Wildfire destroyed communication infrastructure near Nashik. Repairs are required urgently.
+2	Had an amazing sandwich for lunch today and it was delicious.
+3	Weather department announced precautionary measures for Dhaka due to expected strong winds.
+4	Volunteers needed at city shelter to distribute medical kits and food packets.
+0	Wildfire impact near Hanoi: 2 dead, 6 injured, and 6 missing residents.
+1	Wildfire destroyed communication infrastructure near Chennai. Repairs are required urgently.
+2	Trying a new biryani recipe tonight at home.
+3	Public advisory: avoid non-essential travel in Patna as heavy rainfall may intensify.
+4	Donation drive is open in Nashik; please contribute medical kits, hygiene kits, and drinking water.
+0	Wildfire impact near Nashik: 12 dead, 14 injured, and 1 missing residents.
+1	Flooding destroyed communication infrastructure near Miami. Repairs are required urgently.
+2	Had an amazing coffee for lunch today and it was delicious.
+3	Forecast note: thunderstorms may affect low-lying areas around Lahore.
+4	Join the rescue volunteer team in Kolkata. Registration open for trained helpers.
+0	Wildfire in Bengaluru left 29 people injured and 3 missing. Emergency medical aid required.
+1	Major power outage in Colombo after flooding. Around 2658 homes are without electricity.
+2	Just finished my reading session and feeling great.
+3	Official update: strong winds expected in Bangkok by tomorrow.
+4	Join the rescue volunteer team in Pune. Registration open for trained helpers.
+0	Flooding in Kanpur displaced 55 families with 8 people missing. Urgent assistance needed.
+1	Major power outage in Kolkata after flash flood. Around 5691 homes are without electricity.
+2	Had an amazing sushi for lunch today and it was delicious.
+3	Weather bulletin for Kathmandu: strong winds likely through the night.
+4	Volunteers needed at Red Cross point to distribute clothes and medical kits.
+0	Cyclone in Miami left 7 people injured and 8 missing. Emergency medical aid required.
+1	Flash flood destroyed water supply infrastructure near Bhopal. Repairs are required urgently.
+2	Had an amazing pasta for lunch today and it was delicious.
+3	Public advisory: avoid non-essential travel in Jakarta as heavy rainfall may intensify.
+4	Relief campaign in Bengaluru is collecting donations of drinking water and hygiene kits.
+0	After earthquake in Manila, 17 residents were injured and 2 trapped in debris.
+1	Earthquake destroyed communication infrastructure near Bengaluru. Repairs are required urgently.
+2	Just finished my jogging session and feeling great.
+3	Authorities in Chennai continue monitoring weather conditions and issuing updates.
+4	Volunteers needed at city shelter to distribute clothes and food packets.
+0	Flooding struck Kanpur; 4 dead and 33 injured. Families need shelter and medicine immediately.
+1	Major power outage in Ranchi after storm surge. Around 7551 homes are without electricity.
+2	Booked tickets for a concert next weekend.
+3	Public advisory: avoid non-essential travel in Bengaluru as heavy rainfall may intensify.
+4	Relief campaign in Visakhapatnam is collecting donations of drinking water and food packets.
+0	After earthquake in Nashik, 22 residents were injured and 13 trapped in debris.
+1	Major power outage in Kathmandu after cyclone. Around 7751 homes are without electricity.
+2	Just finished my photography session and feeling great.
+3	Public advisory: avoid non-essential travel in Dhaka as possible waterlogging may intensify.
+4	Volunteers needed at Red Cross point to distribute blankets and medical kits.
+0	Storm surge impact near Ahmedabad: 10 dead, 25 injured, and 5 missing residents.
+1	Wildfire destroyed water supply infrastructure near Kathmandu. Repairs are required urgently.
+2	Enjoying music and tea while painting this evening.
+3	Weather department will provide situation updates every two hours for Surat.
+4	Medical volunteers requested urgently at community hall for disaster relief support.
+0	After cyclone in Manila, 35 residents were injured and 3 trapped in debris.
+1	Road surface failure on Ring Road after heavy storm surge. Transport routes are diverted.
+2	Weekend plan: concert and good food with family.
+3	Authorities in Manila continue monitoring weather conditions and issuing updates.
+4	Medical volunteers requested urgently at Red Cross point for disaster relief support.
+0	After storm surge in Delhi, 24 residents were injured and 4 trapped in debris.
+1	Wildfire damaged the transport corridor and blocked key roads in Delhi.
+2	Booked tickets for a cycling next weekend.
+3	Weather department announced precautionary measures for Dhaka due to expected thunderstorms.
+4	Donation drive is open in Ranchi; please contribute food packets, hygiene kits, and clothes.
+0	After wildfire in Cebu, 16 residents were injured and 4 trapped in debris.
+1	Cyclone damaged the drainage network in Madurai. Utility services are disrupted across the area.
+2	Enjoying music and tea while reading this evening.
+3	Weather department will provide situation updates every two hours for Patna.
+4	Relief campaign in Bengaluru is collecting donations of clothes and hygiene kits.
+0	Flooding struck Manila; 6 dead and 8 injured. Families need shelter and medicine immediately.
+1	Major power outage in Kathmandu after landslide. Around 1149 homes are without electricity.
+2	Just finished my gaming session and feeling great.
+3	Official update: heavy rainfall expected in Bangkok by tomorrow.
+4	Relief campaign in Guwahati is collecting donations of hygiene kits and medical kits.
+0	Cyclone struck Karachi; 6 dead and 14 injured. Families need shelter and medicine immediately.
+1	Earthquake damaged the power substation in Hyderabad. Utility services are disrupted across the area.
+2	Spent the evening enjoying a cycling with friends.
+3	Weather bulletin for Bengaluru: strong winds likely through the night.
+4	Relief campaign in Cebu is collecting donations of hygiene kits and drinking water.
+0	Storm surge struck Hyderabad; 12 dead and 29 injured. Families need shelter and medicine immediately.
+1	Road surface failure on Bypass Road after heavy flash flood. Transport routes are diverted.
+2	Trying a new sandwich recipe tonight at home.
+3	Public safety unit will provide situation updates every two hours for Manila.
+4	Please donate essential supplies at NGO center for affected families.
+0	Cloudburst struck Chennai; 9 dead and 21 injured. Families need shelter and medicine immediately.
+1	Main bridge on Bypass Road collapsed after flash flood. Road access to Lahore is blocked.
+2	Spent the evening enjoying a workout with friends.
+3	Weather bulletin for Visakhapatnam: heavy rainfall likely through the night.
+4	Donation drive is open in Ranchi; please contribute drinking water, food packets, and blankets.
+0	Flooding impact near Nashik: 11 dead, 35 injured, and 4 missing residents.
+1	Landslide destroyed transport infrastructure near Delhi. Repairs are required urgently.
+2	Just finished my painting session and feeling great.
+3	Forecast note: possible waterlogging may affect low-lying areas around Ranchi.
+4	Volunteers needed at district hospital to distribute clothes and hygiene kits.
+0	After flash flood in Surat, 30 residents were injured and 14 trapped in debris.
+1	Road surface failure on Route 54 after heavy flash flood. Transport routes are diverted.
+2	Weekend plan: family dinner and good food with family.
+3	Forecast note: thunderstorms may affect low-lying areas around Kolkata.
+4	Relief campaign in Hyderabad is collecting donations of blankets and drinking water.
+0	Wildfire in Guwahati left 18 people injured and 6 missing. Emergency medical aid required.
+1	Cloudburst destroyed electricity infrastructure near Hyderabad. Repairs are required urgently.
+2	Weekend plan: shopping and good food with family.
+3	Authorities in Patna continue monitoring weather conditions and issuing updates.
+4	Relief campaign in Lucknow is collecting donations of food packets and clothes.
+0	After cloudburst in Hanoi, 32 residents were injured and 12 trapped in debris.
+1	Flash flood destroyed water supply infrastructure near Ranchi. Repairs are required urgently.
+2	Booked tickets for a movie next weekend.
+3	Forecast note: possible waterlogging may affect low-lying areas around Visakhapatnam.
+4	Volunteers needed at Red Cross point to distribute medical kits and hygiene kits.
+0	Wildfire struck Nashik; 10 dead and 34 injured. Families need shelter and medicine immediately.
+1	Storm surge destroyed water supply infrastructure near Surat. Repairs are required urgently.
+2	Trying a new pizza recipe tonight at home.
+3	Public advisory: avoid non-essential travel in Cebu as rising river levels may intensify.
+4	Volunteers needed at city shelter to distribute hygiene kits and clothes.
+0	Flooding struck Bengaluru; 3 dead and 35 injured. Families need shelter and medicine immediately.
+1	Wildfire damaged the electric grid line in Karachi. Utility services are disrupted across the area.
+2	Trying a new pancakes recipe tonight at home.
+3	Official update: heavy rainfall expected in Ahmedabad by tomorrow.
+4	Donation drive is open in Cebu; please contribute food packets, drinking water, and clothes.
+0	Flash flood struck Delhi; 6 dead and 30 injured. Families need shelter and medicine immediately.
+1	Cyclone destroyed transport infrastructure near Jakarta. Repairs are required urgently.
+2	Weekend plan: hiking trip and good food with family.
+3	Public advisory: avoid non-essential travel in Nashik as possible waterlogging may intensify.
+4	Join the rescue volunteer team in Delhi. Registration open for trained helpers.
+0	Flooding in Kathmandu displaced 13 families with 5 people missing. Urgent assistance needed.
+1	Storm surge damaged the water pipeline and blocked key roads in Kolkata.
+2	Weekend plan: beach trip and good food with family.
+3	District administration announced precautionary measures for Hyderabad due to expected rising river levels.
+4	Join the rescue volunteer team in Nashik. Registration open for trained helpers.
+0	Cyclone impact near Colombo: 12 dead, 30 injured, and 8 missing residents.
+1	Earthquake damaged the main roadway and blocked key roads in Houston.
+2	Booked tickets for a shopping next weekend.
+3	Forecast note: rising river levels may affect low-lying areas around Dhaka.
+4	Relief campaign in Bangkok is collecting donations of clothes and drinking water.
+0	After flash flood in Colombo, 23 residents were injured and 2 trapped in debris.
+1	Cyclone damaged the electric grid line in Dhaka. Utility services are disrupted across the area.
+2	Had an amazing biryani for lunch today and it was delicious.
+3	Authorities in Kolkata continue monitoring weather conditions and issuing updates.
+4	Donation drive is open in Madurai; please contribute clothes, blankets, and hygiene kits.
+0	Storm surge in Jaipur displaced 45 families with 6 people missing. Urgent assistance needed.
+1	Cloudburst destroyed communication infrastructure near Jaipur. Repairs are required urgently.
+2	Trying a new pasta recipe tonight at home.
+3	Authorities in Kanpur continue monitoring weather conditions and issuing updates.
+4	Join the rescue volunteer team in Madurai. Registration open for trained helpers.

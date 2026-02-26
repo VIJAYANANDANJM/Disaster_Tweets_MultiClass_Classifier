@@ -1,15 +1,15 @@
 # Test Tweets Report
 
-- Source file: `C:\Users\vijay\OneDrive\Desktop\Disaster_Tweets_MultiClass_Classifier\test_tweets.txt`
-- Generated at: `2026-02-26T20:48:49`
+- Source file: `C:\Users\vijay\OneDrive\Desktop\Disaster_Tweets_MultiClass_Classifier\test_tweets_high_confidence.txt`
+- Generated at: `2026-02-26T21:10:45`
 
 ## Core Metrics
 
-- Total test tweets processed: **57**
-- Labeled subset size (from CATEGORY 0-4 sections): **32**
-- Accuracy (labeled subset): **0.875**
-- Macro F1 (labeled subset): **0.8713725490196078**
-- Weighted F1 (labeled subset): **0.8718137254901962**
+- Total test tweets processed: **300**
+- Labeled subset size (from CATEGORY 0-4 sections): **300**
+- Accuracy (labeled subset): **0.87**
+- Macro F1 (labeled subset): **0.8726220792389942**
+- Weighted F1 (labeled subset): **0.872622079238994**
 
 ## Artifacts
 

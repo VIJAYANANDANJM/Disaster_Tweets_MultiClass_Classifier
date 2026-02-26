@@ -162,5 +162,129 @@ Roads flooded and damaged. Highway closed indefinitely.
 Buildings destroyed in fire. Infrastructure severely damaged.
 
 # ============================================
+# ADDITIONAL HIGH-CONFIDENCE TEST TWEETS (VALIDATED)
+# ============================================
+
+# ============================================
+# CATEGORY 0: AFFECTED INDIVIDUALS (ADDITIONAL)
+# ============================================
+
+Monsoon flood in Lucknow left 13 people injured and 5 missing. Families need medical care urgently.
+
+Earthquake in Manipur injured 18 residents and left 4 people trapped in debris.
+
+Cyclone in coastal Andhra left 9 dead and 27 injured. Emergency health support required.
+
+Flash floods in Nashik left 21 villagers stranded and 6 injured.
+
+Flooding in Kanpur left 10 injured and 3 missing residents needing urgent medical help.
+
+Earthquake tremors in Sikkim caused 5 deaths and 16 injuries in nearby villages.
+
+Heavy rainfall in Madurai left 12 people trapped and 7 injured in low-lying areas.
+
+Cyclone in Odisha left 12 people injured and 3 missing. Families need shelter and medicine immediately.
+
+Earthquake in Jaipur caused 7 deaths and 21 injuries. Families require urgent medical care.
+
+Storm surge in Visakhapatnam displaced 35 families; 10 people injured and 2 missing.
+
+# ============================================
+# CATEGORY 1: INFRASTRUCTURE AND UTILITY DAMAGE (ADDITIONAL)
+# ============================================
+
+Main bridge on Highway 8 collapsed after quake. Traffic halted and road fully blocked.
+
+City-wide power outage in Dallas after storm damage. Electricity supply disrupted for hours.
+
+Wildfire destroyed transmission lines; 5000 homes without power in the district.
+
+Floodwater damaged the central water pipeline. Clean water network is down across town.
+
+Landslide blocked the mountain highway and destroyed guard walls. Route closed indefinitely.
+
+Substation fire caused major electricity outage in downtown zone. Grid restoration underway.
+
+Earthquake cracked flyover pillars and damaged two tunnels. Infrastructure safety checks ongoing.
+
+Damaged sewage pumps and broken drainage lines after flooding. Utility services disrupted.
+
+Bridge deck failure on Route 54 cut access to the industrial area.
+
+Road surface collapsed near the metro station after heavy rain. Transport routes diverted.
+
+# ============================================
+# CATEGORY 2: NOT HUMANITARIAN (ADDITIONAL)
+# ============================================
+
+Had the best coffee and croissant this morning at the new cafe.
+
+Weekend hiking trip was amazing, the mountain view was beautiful.
+
+Watching a comedy movie tonight with friends and popcorn.
+
+My new phone camera quality is incredible for portraits.
+
+Just finished a great workout session at the gym.
+
+Trying a new pasta recipe for dinner tonight.
+
+Booked tickets for a music concert next month.
+
+Sunny afternoon walk by the lake felt refreshing.
+
+Reading a novel and relaxing with tea at home.
+
+Celebrating my birthday with family this evening.
+
+# ============================================
+# CATEGORY 3: OTHER RELEVANT INFORMATION (ADDITIONAL)
+# ============================================
+
+Official weather bulletin: intense rainfall expected across the valley tomorrow.
+
+State meteorological center issued a wind advisory for coastal districts tonight.
+
+Authorities confirmed that river level updates will be published every two hours.
+
+Public safety update: schools in low-lying wards will remain closed tomorrow.
+
+Forecast update: thunderstorm activity likely to increase in northern zones this evening.
+
+Emergency operations center reports conditions are stable but under close monitoring.
+
+Regional advisory: avoid travel on hillside roads due to expected heavy rain.
+
+Government weather desk predicts possible urban waterlogging by early morning.
+
+District control room released updated precaution guidelines for residents.
+
+Latest bulletin indicates moderate flood risk in riverside communities.
+
+# ============================================
+# CATEGORY 4: RESCUE VOLUNTEERING OR DONATION (ADDITIONAL)
+# ============================================
+
+Volunteers needed at relief camp to distribute food packets and drinking water.
+
+Donation drive open now: blankets, clothes, and medicine accepted at community hall.
+
+Medical volunteers requested for emergency clinic near flood shelter.
+
+Local NGOs are collecting funds for cyclone survivors, contributions welcome.
+
+Rescue volunteers with boats needed in riverbank villages tonight.
+
+Blood donation camp started for earthquake victims at district hospital.
+
+Please donate dry food and hygiene kits for families in temporary shelters.
+
+Volunteer coordination center requests nurses and paramedics for field support.
+
+Charity pickup vans are collecting relief materials from all city zones.
+
+Join the rescue support team; registration open for trained volunteers.
+
+# ============================================
 # END OF TEST TWEETS
 # ============================================

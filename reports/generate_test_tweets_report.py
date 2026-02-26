@@ -38,6 +38,7 @@ ALL_LABELS = sorted(LABEL_MAP.keys())
 def parse_test_tweets_file(file_path: Path) -> pd.DataFrame:
     """Parse tweets and optional expected labels from the structured test file."""
     category_re = re.compile(r"^#\s*CATEGORY\s+(\d+)\s*:", re.IGNORECASE)
+    inline_label_re = re.compile(r"^\s*([0-4])(?:\t+|\s*[|,;]\s*)(.+?)\s*$")
     reset_re = re.compile(
         r"^#\s*(COMPLEX|LOCATION-SPECIFIC|TIME-SPECIFIC|NEEDS-SPECIFIC|PEOPLE COUNT|DAMAGE TYPE|END OF)",
         re.IGNORECASE,
@@ -60,6 +61,27 @@ def parse_test_tweets_file(file_path: Path) -> pd.DataFrame:
 
                 if reset_re.match(line):
                     current_expected_label = None
+                continue
+
+            # Optional inline labeled format:
+            #   0<TAB>tweet text
+            #   1|tweet text
+            #   2, tweet text
+            inline_match = inline_label_re.match(line)
+            if inline_match:
+                inline_label = int(inline_match.group(1))
+                tweet_text = inline_match.group(2).strip()
+                if not tweet_text:
+                    continue
+                rows.append(
+                    {
+                        "tweet_idx": len(rows) + 1,
+                        "line_no": line_no,
+                        "text": tweet_text,
+                        "expected_label_id": inline_label,
+                        "expected_label_name": LABEL_DISPLAY_NAMES.get(inline_label),
+                    }
+                )
                 continue
 
             rows.append(
