@@ -1,0 +1,6 @@
+label_id,expected_count,predicted_count,label_name
+0,6,4,Affected Individuals
+1,7,8,Infrastructure Damage
+2,6,6,Not Humanitarian
+3,6,4,Other Information
+4,7,10,Rescue/Donation

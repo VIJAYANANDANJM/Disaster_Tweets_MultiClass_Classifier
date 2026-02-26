@@ -6,6 +6,7 @@ import torch
 import sys
 import os
 from transformers import AutoTokenizer
+from typing import Any, Dict, List
 
 # Add project root to path to import Trained_Model modules
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -16,6 +17,77 @@ from Trained_Model.Model import DeLTran15
 from Trained_Model.Explainable_AI import explain_prediction
 from Trained_Model.Actionable_Info import extract_actionable_info
 from Dashboard.config import MODEL_NAME, MODEL_PATH, TOKENIZER_PATH, LABEL_MAP, ACTIONABLE_LABELS
+
+
+def _as_list(value: Any) -> List[Any]:
+    """Return value as a list for consistent actionable-info processing."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, tuple):
+        return list(value)
+    return [value]
+
+
+def _normalize_actionable_info(actionable_info: Any) -> Dict[str, Any]:
+    """
+    Normalize actionable info keys to the backend schema shape.
+    Supports both snake_case and camelCase inputs.
+    """
+    if not isinstance(actionable_info, dict):
+        return {}
+
+    normalized: Dict[str, Any] = {}
+
+    locations = [str(x).strip() for x in _as_list(actionable_info.get("locations")) if str(x).strip()]
+    needs = [str(x).strip() for x in _as_list(actionable_info.get("needs")) if str(x).strip()]
+    damage = [
+        str(x).strip()
+        for x in _as_list(actionable_info.get("damageType") or actionable_info.get("damage_type"))
+        if str(x).strip()
+    ]
+    time_mentions = [
+        str(x).strip()
+        for x in _as_list(actionable_info.get("timeMentions") or actionable_info.get("time_mentions"))
+        if str(x).strip()
+    ]
+
+    people_raw = _as_list(actionable_info.get("peopleCount") or actionable_info.get("people_count"))
+    people_count: List[Dict[str, Any]] = []
+    for item in people_raw:
+        if isinstance(item, dict):
+            count = item.get("count")
+            status = item.get("status")
+            entry: Dict[str, Any] = {}
+            if count is not None:
+                try:
+                    entry["count"] = int(count)
+                except (TypeError, ValueError):
+                    entry["count"] = count
+            if status is not None and str(status).strip():
+                entry["status"] = str(status).strip()
+            if entry:
+                people_count.append(entry)
+        elif str(item).strip():
+            people_count.append({"status": str(item).strip()})
+
+    location_note = actionable_info.get("locationNote") or actionable_info.get("location_note")
+    if location_note is not None and str(location_note).strip():
+        normalized["locationNote"] = str(location_note).strip()
+
+    if locations:
+        normalized["locations"] = locations
+    if people_count:
+        normalized["peopleCount"] = people_count
+    if needs:
+        normalized["needs"] = needs
+    if damage:
+        normalized["damageType"] = damage
+    if time_mentions:
+        normalized["timeMentions"] = time_mentions
+
+    return normalized
 
 
 class ModelInference:
@@ -132,7 +204,7 @@ class ModelInference:
             return None
         
         try:
-            return extract_actionable_info(text)
+            return _normalize_actionable_info(extract_actionable_info(text))
         except Exception as e:
             print(f"Error extracting actionable info: {e}")
             return None

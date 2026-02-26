@@ -11,11 +11,11 @@ from datetime import datetime
 from typing import List, Dict, Optional, Any
 import uuid
 
-from api_client import APIClient
-from model_inference import ModelInference
-from token_highlighter import TokenHighlighter
-from config import (
-    LABEL_DISPLAY_NAMES, LABEL_COLORS, MAX_TWEETS_PER_FETCH
+from Dashboard.api_client import APIClient, _normalize_actionable_info
+from Dashboard.model_inference import ModelInference
+from Dashboard.token_highlighter import TokenHighlighter
+from Dashboard.config import (
+    LABEL_DISPLAY_NAMES, LABEL_COLORS, MAX_TWEETS_PER_FETCH, ACTIONABLE_LABELS
 )
 
 # HITL Storage
@@ -86,7 +86,7 @@ class ConnectionFrame(ctk.CTkFrame):
         def check_thread():
             if self.api_client.check_health():
                 self.status_label.configure(
-                    text="✓ Backend server connected",
+                    text="Backend server connected",
                     text_color="green"
                 )
                 self.retry_btn.pack_forget()
@@ -330,21 +330,20 @@ class TweetCard(ctk.CTkFrame):
 
 class TweetDetailFrame(ctk.CTkFrame):
     """Detailed tweet view with actionable info and token highlighting."""
-    
+
     def __init__(self, parent, token_highlighter, api_client, dashboard_ref):
         super().__init__(parent)
         self.token_highlighter = token_highlighter
-        self.api_client = api_client # For DB syncing
-        self.dashboard = dashboard_ref # Reference to trigger global refresh
+        self.api_client = api_client  # For DB syncing
+        self.dashboard = dashboard_ref  # Reference to trigger global refresh
         self.current_tweet = None
         self.current_classification = None
-        self.verification_mode = False 
-        
+        self.verification_mode = False
+
         self.setup_ui()
-    
+
     def setup_ui(self):
         """Setup detail view UI."""
-        # Header Container for Title and Refresh
         header_container = ctk.CTkFrame(self, fg_color="transparent")
         header_container.pack(fill="x", pady=10)
 
@@ -355,25 +354,18 @@ class TweetDetailFrame(ctk.CTkFrame):
         )
         title.pack(side="left", padx=20)
 
-        
-        
-        # Scrollable frame for content
         self.scroll_frame = ctk.CTkScrollableFrame(self)
         self.scroll_frame.pack(fill="both", expand=True, padx=10, pady=10)
-        
-        # Tweet info section
+
         self.info_frame = ctk.CTkFrame(self.scroll_frame)
         self.info_frame.pack(fill="x", pady=5)
-        
-        # Highlighted tweet text
+
         self.text_frame = ctk.CTkFrame(self.scroll_frame)
         self.text_frame.pack(fill="x", pady=5)
-        
-        # Actionable info section
+
         self.actionable_frame = ctk.CTkFrame(self.scroll_frame)
         self.actionable_frame.pack(fill="x", pady=5)
-        
-        # Initially show placeholder
+
         self.placeholder = ctk.CTkLabel(
             self.scroll_frame,
             text="Select a tweet to view details",
@@ -387,7 +379,7 @@ class TweetDetailFrame(ctk.CTkFrame):
         def run_sync():
             try:
                 self.api_client.update_tweet_classification(
-                    tweet_data['tweetId'], 
+                    tweet_data['tweetId'],
                     tweet_data['classification'],
                     tweet_data.get('explanation', []),
                     tweet_data.get('actionableInfo', {}),
@@ -395,38 +387,46 @@ class TweetDetailFrame(ctk.CTkFrame):
                 )
             except Exception as e:
                 print(f"Error syncing to DB: {e}")
-        
+
         threading.Thread(target=run_sync, daemon=True).start()
 
     def open_correction_popup(self, tweet_data, current_label_id):
-        """Centered Popup for selecting correct class."""
+        """Centered popup for selecting correct class."""
         popup = ctk.CTkToplevel(self)
         popup.title("Human Classification Correction")
         popup.geometry("600x550")
-        
-        # Force it to center
+
         popup.update_idletasks()
         x = (popup.winfo_screenwidth() // 2) - (600 // 2)
         y = (popup.winfo_screenheight() // 2) - (550 // 2)
         popup.geometry(f"+{x}+{y}")
         popup.attributes("-topmost", True)
-        
-        ctk.CTkLabel(popup, text="Verify and Correct Classification", font=ctk.CTkFont(size=18, weight="bold")).pack(pady=15)
-        
-        # Show Tweet Text in a scrollable box
+
+        ctk.CTkLabel(
+            popup,
+            text="Verify and Correct Classification",
+            font=ctk.CTkFont(size=18, weight="bold")
+        ).pack(pady=15)
+
         text_box = ctk.CTkTextbox(popup, height=120, width=500)
         text_box.insert("1.0", f"TWEET CONTENT:\n\n{tweet_data.get('text', '')}")
         text_box.configure(state="disabled")
         text_box.pack(pady=10, padx=20)
-        
-        ctk.CTkLabel(popup, text="Please select the correct category:", font=ctk.CTkFont(weight="bold")).pack(pady=10)
-        
-        # Mapping radio buttons
+
+        ctk.CTkLabel(
+            popup,
+            text="Please select the correct category:",
+            font=ctk.CTkFont(weight="bold")
+        ).pack(pady=10)
+
         choice_var = ctk.IntVar(value=current_label_id if current_label_id is not None else 0)
-        
+
         for lid, name in LABEL_DISPLAY_NAMES.items():
             ctk.CTkRadioButton(
-                popup, text=name, variable=choice_var, value=lid
+                popup,
+                text=name,
+                variable=choice_var,
+                value=lid
             ).pack(pady=4, anchor="w", padx=180)
 
         def submit_correction():
@@ -435,20 +435,16 @@ class TweetDetailFrame(ctk.CTkFrame):
             if 'classification' in tweet_data:
                 tweet_data['classification']['predictedLabelId'] = selected_lid
                 tweet_data['classification']['predictedLabel'] = LABEL_DISPLAY_NAMES.get(selected_lid, "Unknown")
-            
-            # Sync to Database
+
             self.sync_to_db(tweet_data)
-            
-            # Sync to Local Feedback file
             save_feedback(tweet_data.get('text', ''), selected_lid)
             popup.destroy()
             self.display_tweet(tweet_data)
-            # Refresh lists
             self.dashboard.display_tweets()
-        
+
         ctk.CTkButton(
-            popup, 
-            text="Submit Correction & Sync to DB", 
+            popup,
+            text="Submit Correction & Sync to DB",
             command=submit_correction,
             fg_color="#1F6AA5",
             height=40
@@ -459,21 +455,21 @@ class TweetDetailFrame(ctk.CTkFrame):
         self.current_tweet = tweet_data
         classification = tweet_data.get('classification', {})
         self.current_classification = classification
-        
+
         if hasattr(self, 'placeholder'):
             self.placeholder.pack_forget()
-        
-        # Clear previous content
-        for widget in self.info_frame.winfo_children(): widget.destroy()
-        for widget in self.text_frame.winfo_children(): widget.destroy()
-        for widget in self.actionable_frame.winfo_children(): widget.destroy()
-        
-        # Header / Classification
+
+        for widget in self.info_frame.winfo_children():
+            widget.destroy()
+        for widget in self.text_frame.winfo_children():
+            widget.destroy()
+        for widget in self.actionable_frame.winfo_children():
+            widget.destroy()
+
         label_id = classification.get("predictedLabelId")
         label_name = LABEL_DISPLAY_NAMES.get(label_id, "Unknown") if label_id is not None else "Not Classified"
         label_color = LABEL_COLORS.get(label_id, "#95A5A6")
-        
-        # Status display logic
+
         current_status = tweet_data.get('status', 'unverified')
         status_text = "Model Classification"
         if current_status == 'human_verified':
@@ -482,26 +478,34 @@ class TweetDetailFrame(ctk.CTkFrame):
             status_text += " (Auto Verified)"
         else:
             status_text += " (Requires Human Review)"
-            
+
         info_title = ctk.CTkLabel(self.info_frame, text=status_text, font=ctk.CTkFont(size=16, weight="bold"))
         if current_status != 'unverified':
-            info_title.configure(text_color="#27AE60") # Green
+            info_title.configure(text_color="#27AE60")
         else:
-            info_title.configure(text_color="#E67E22") # Orange
+            info_title.configure(text_color="#E67E22")
         info_title.pack(anchor="w", padx=10, pady=5)
-        
+
         label_badge = ctk.CTkFrame(self.info_frame, fg_color=label_color, corner_radius=5)
         label_badge.pack(fill="x", padx=10, pady=5)
-        
-        ctk.CTkLabel(label_badge, text=label_name, font=ctk.CTkFont(size=14, weight="bold"), text_color="white").pack(pady=8)
-        
-        # HUMAN VERIFICATION BUTTONS
+
+        ctk.CTkLabel(
+            label_badge,
+            text=label_name,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color="white"
+        ).pack(pady=8)
+
         if self.verification_mode and current_status == 'unverified':
             verify_box = ctk.CTkFrame(self.info_frame, fg_color="#333333", border_width=1)
             verify_box.pack(fill="x", padx=10, pady=10)
-            
-            ctk.CTkLabel(verify_box, text="Is this classification correct?", font=ctk.CTkFont(weight="bold")).pack(pady=5)
-            
+
+            ctk.CTkLabel(
+                verify_box,
+                text="Is this classification correct?",
+                font=ctk.CTkFont(weight="bold")
+            ).pack(pady=5)
+
             btn_row = ctk.CTkFrame(verify_box, fg_color="transparent")
             btn_row.pack(pady=5)
 
@@ -509,7 +513,7 @@ class TweetDetailFrame(ctk.CTkFrame):
                 tweet_data['status'] = 'human_verified'
                 self.sync_to_db(tweet_data)
                 save_feedback(tweet_data.get('text', ''), label_id)
-                accept_btn.configure(text="Synced ✓", state="disabled")
+                accept_btn.configure(text="Synced OK", state="disabled")
                 reject_btn.pack_forget()
                 info_title.configure(text="Model Classification (Human Verified & Stored)", text_color="#27AE60")
                 self.dashboard.display_tweets()
@@ -518,42 +522,49 @@ class TweetDetailFrame(ctk.CTkFrame):
             accept_btn.pack(side="left", padx=10)
 
             reject_btn = ctk.CTkButton(
-                btn_row, 
-                text="Reject & Correct", 
-                fg_color="#C0392B", 
-                width=120, 
+                btn_row,
+                text="Reject & Correct",
+                fg_color="#C0392B",
+                width=120,
                 command=lambda: self.open_correction_popup(tweet_data, label_id)
             )
             reject_btn.pack(side="left", padx=10)
-        
+
         elif current_status == 'human_verified' or current_status == 'verified':
-             sync_msg = ctk.CTkLabel(self.info_frame, text="✓ Classification Sync Complete", text_color="#27AE60", font=ctk.CTkFont(size=11))
-             sync_msg.pack(pady=5)
-        
-        # Metadata
+            sync_msg = ctk.CTkLabel(
+                self.info_frame,
+                text="Classification Sync Complete",
+                text_color="#27AE60",
+                font=ctk.CTkFont(size=11)
+            )
+            sync_msg.pack(pady=5)
+
         meta_frame = ctk.CTkFrame(self.info_frame, fg_color="transparent")
         meta_frame.pack(fill="x", padx=10, pady=5)
-        ctk.CTkLabel(meta_frame, text=f"Author: @{tweet_data.get('author', 'unknown')}", font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w")
-        
-        # Token Highlighting Section
+        ctk.CTkLabel(
+            meta_frame,
+            text=f"Author: @{tweet_data.get('author', 'unknown')}",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).pack(anchor="w")
+
         text_title = ctk.CTkLabel(self.text_frame, text="Token Importance (XAI)", font=ctk.CTkFont(size=16, weight="bold"))
         text_title.pack(anchor="w", padx=10, pady=5)
-        
+
         explanation = tweet_data.get("explanation", [])
         if explanation:
             if isinstance(explanation, list) and len(explanation) > 0 and isinstance(explanation[0], dict):
                 explanation = [(e.get('token', ''), e.get('score', 0.0)) for e in explanation]
-            
+
             segments = self.token_highlighter.create_highlighted_text(tweet_data.get('text', ''), explanation)
             text_container = ctk.CTkFrame(self.text_frame, fg_color="#1A1A1A")
             text_container.pack(fill="x", padx=10, pady=10)
             inner_wrap = ctk.CTkFrame(text_container, fg_color="transparent")
             inner_wrap.pack(padx=5, pady=5)
-            
-            for i, (segment_text, color, score) in enumerate(segments):
+
+            for segment_text, color, score in segments:
                 if segment_text.strip() or " " in segment_text:
                     lbl = ctk.CTkLabel(
-                        inner_wrap, 
+                        inner_wrap,
                         text=segment_text,
                         fg_color=color if score > 0.1 else "transparent",
                         text_color="white" if score > 0.4 else "gray90",
@@ -562,16 +573,81 @@ class TweetDetailFrame(ctk.CTkFrame):
                     )
                     lbl.pack(side="left")
         else:
-            ctk.CTkLabel(self.text_frame, text=tweet_data.get('text', ''), wraplength=550, justify="left").pack(padx=10, pady=10)
+            ctk.CTkLabel(
+                self.text_frame,
+                text=tweet_data.get('text', ''),
+                wraplength=550,
+                justify="left"
+            ).pack(padx=10, pady=10)
 
-        # Actionable Info Section
         actionable_info = tweet_data.get("actionableInfo")
-        if actionable_info:
-            ctk.CTkLabel(self.actionable_frame, text="Actionable Extraction", font=ctk.CTkFont(size=16, weight="bold")).pack(anchor="w", padx=10, pady=5)
-            for key, emoji in [("locations", "📍"), ("needs", "🆘"), ("damageType", "💥")]:
-                vals = actionable_info.get(key)
-                if vals:
-                    ctk.CTkLabel(self.actionable_frame, text=f"{emoji} {key.title()}: {', '.join(vals)}", font=ctk.CTkFont(size=12)).pack(anchor="w", padx=20)
+        if isinstance(actionable_info, dict) and actionable_info:
+            def _to_str_list(value):
+                if value is None:
+                    return []
+                if not isinstance(value, (list, tuple)):
+                    value = [value]
+                return [str(v).strip() for v in value if str(v).strip()]
+
+            locations = _to_str_list(actionable_info.get("locations"))
+            needs = _to_str_list(actionable_info.get("needs"))
+            damage = _to_str_list(actionable_info.get("damageType") or actionable_info.get("damage_type"))
+            time_mentions = _to_str_list(actionable_info.get("timeMentions") or actionable_info.get("time_mentions"))
+
+            people_raw = actionable_info.get("peopleCount") or actionable_info.get("people_count") or []
+            if not isinstance(people_raw, (list, tuple)):
+                people_raw = [people_raw]
+
+            people_count = []
+            for item in people_raw:
+                if isinstance(item, dict):
+                    count = item.get("count")
+                    status = item.get("status")
+                    if count is not None and status:
+                        people_count.append(f"{count} {status}")
+                    elif count is not None:
+                        people_count.append(str(count))
+                    elif status:
+                        people_count.append(str(status))
+                elif str(item).strip():
+                    people_count.append(str(item).strip())
+
+            location_note = actionable_info.get("locationNote") or actionable_info.get("location_note")
+            has_data = any([locations, needs, damage, people_count, time_mentions, location_note])
+
+            if has_data:
+                ctk.CTkLabel(
+                    self.actionable_frame,
+                    text="Actionable Extraction",
+                    font=ctk.CTkFont(size=16, weight="bold")
+                ).pack(anchor="w", padx=10, pady=5)
+
+                rows = [
+                    ("Locations", locations),
+                    ("Needs", needs),
+                    ("Damage Type", damage),
+                    ("People Count", people_count),
+                    ("Time Mentions", time_mentions),
+                ]
+                for label, values in rows:
+                    if values:
+                        ctk.CTkLabel(
+                            self.actionable_frame,
+                            text=f"{label}: {', '.join(values)}",
+                            font=ctk.CTkFont(size=12),
+                            wraplength=550,
+                            justify="left"
+                        ).pack(anchor="w", padx=20, pady=2)
+
+                if location_note:
+                    ctk.CTkLabel(
+                        self.actionable_frame,
+                        text=f"Location Note: {location_note}",
+                        font=ctk.CTkFont(size=11),
+                        text_color="gray",
+                        wraplength=550,
+                        justify="left"
+                    ).pack(anchor="w", padx=20, pady=(4, 2))
 
 
 class MainDashboard(ctk.CTk):
@@ -613,7 +689,7 @@ class MainDashboard(ctk.CTk):
         # REFRESH DATABASE BUTTON
         self.refresh_btn = ctk.CTkButton(
             top_bar, 
-            text="🔄 Refresh Database", 
+            text="Refresh Database", 
             width=150,
             fg_color="#34495E",
             hover_color="#2C3E50",
@@ -736,7 +812,7 @@ class MainDashboard(ctk.CTk):
         """Fetch all changes from DB and restart filtering/classification."""
         # Visual feedback
         if hasattr(self, 'refresh_btn'):
-            self.refresh_btn.configure(text="⌛ Syncing...", state="disabled")
+            self.refresh_btn.configure(text="Syncing...", state="disabled")
 
         def load_thread():
             success, _, tweets, _ = self.api_client.get_tweets(page=1, limit=MAX_TWEETS_PER_FETCH)
@@ -745,13 +821,28 @@ class MainDashboard(ctk.CTk):
             
             # Reset UI button
             if hasattr(self, 'refresh_btn'):
-                self.after(500, lambda: self.refresh_btn.configure(text="🔄 Refresh Database", state="normal"))
+                self.after(500, lambda: self.refresh_btn.configure(text="Refresh Database", state="normal"))
 
         threading.Thread(target=load_thread, daemon=True).start()
     
     def classify_tweets_locally(self, tweets):
         """Iterate loaded tweets and update status based on threshold."""
         if not self.model_inference: self.model_inference = ModelInference()
+
+        def sync_tweet_to_db(tweet_obj):
+            """Push local tweet classification/actionable updates to backend."""
+            if not tweet_obj.get('tweetId') or not tweet_obj.get('classification'):
+                return
+            threading.Thread(
+                target=lambda t=tweet_obj: self.api_client.update_tweet_classification(
+                    t['tweetId'],
+                    t.get('classification', {}),
+                    t.get('explanation', []),
+                    t.get('actionableInfo', {}),
+                    status=t.get('status', 'unverified')
+                ),
+                daemon=True
+            ).start()
         
         processed = []
         for tweet in tweets:
@@ -779,16 +870,26 @@ class MainDashboard(ctk.CTk):
                         tweet['status'] = status
                         
                         if status == 'verified':
-                            threading.Thread(target=lambda t=tweet: self.api_client.update_tweet_classification(
-                                t['tweetId'], t['classification'], t.get('explanation', []), t.get('actionableInfo', {}), status='verified'
-                            ), daemon=True).start()
+                            sync_tweet_to_db(tweet)
                 else:
                     confidence = max(scores)
                     if confidence >= CONFIDENCE_THRESHOLD:
                         tweet['status'] = 'verified'
-                        threading.Thread(target=lambda t=tweet: self.api_client.update_tweet_classification(
-                            t['tweetId'], t['classification'], t.get('explanation', []), t.get('actionableInfo', {}), status='verified'
-                        ), daemon=True).start()
+                        sync_tweet_to_db(tweet)
+
+            # Backfill/migrate actionable info for already-classified actionable tweets.
+            pred_label_id = tweet.get('classification', {}).get('predictedLabelId')
+            if pred_label_id in ACTIONABLE_LABELS and self.model_inference.loaded:
+                recomputed_actionable = self.model_inference.get_actionable_info(
+                    tweet.get('text', ''),
+                    pred_label_id
+                ) or {}
+                recomputed_actionable = _normalize_actionable_info(recomputed_actionable)
+                current_actionable = _normalize_actionable_info(tweet.get('actionableInfo') or {})
+
+                if recomputed_actionable != current_actionable:
+                    tweet['actionableInfo'] = recomputed_actionable
+                    sync_tweet_to_db(tweet)
             
             processed.append(tweet)
         
@@ -829,3 +930,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

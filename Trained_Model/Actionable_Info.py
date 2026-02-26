@@ -15,7 +15,8 @@ NEEDS_KEYWORDS = {
 
 DAMAGE_KEYWORDS = {
     "bridge", "road", "highway", "power", "electricity", "collapsed", "flooded",
-    "fire", "wildfire", "damaged", "destroyed", "outage", "blocked", "landslide", "roads", "floods"
+    "fire", "wildfire", "damaged", "damage", "damages", "destroyed", "destroy", "destruction",
+    "outage", "blocked", "landslide", "roads", "floods"
 }
 
 TIME_PATTERNS = [
@@ -23,13 +24,23 @@ TIME_PATTERNS = [
     r"\btoday\b",
     r"\byesterday\b",
     r"\btonight\b",
+    r"\bimmediately\b",
+    r"\burgently\b",
+    r"\basap\b",
     r"\bthis\s+morning\b",
     r"\bthis\s+afternoon\b",
     r"\bthis\s+evening\b",
     r"\b\d+\s*(mins?|minutes?|hrs?|hours?)\s*ago\b",
 ]
 
-PEOPLE_COUNT_PATTERN = r"\b(\d+)\s+(injured|dead|killed|missing|trapped|wounded)\b"
+# Support common casualty phrasings:
+# - "30 injured"
+# - "8 people killed"
+# - "at least 12 dead"
+PEOPLE_COUNT_PATTERNS = [
+    r"\b(?:at\s+least|over|around|about|approximately)?\s*(\d+)\+?\s+(injured|dead|killed|missing|trapped|wounded)\b",
+    r"\b(?:at\s+least|over|around|about|approximately)?\s*(\d+)\+?\s+people\s+(injured|dead|killed|missing|trapped|wounded)\b",
+]
 
 
 def _extract_locations(text):
@@ -61,9 +72,17 @@ def _extract_locations(text):
 
 
 def _extract_people_counts(text):
-    matches = re.findall(PEOPLE_COUNT_PATTERN, text, flags=re.IGNORECASE)
+    matches = []
+    for pattern in PEOPLE_COUNT_PATTERNS:
+        matches.extend(re.findall(pattern, text, flags=re.IGNORECASE))
+
     results = []
+    seen = set()
     for count, status in matches:
+        key = (count, status.lower())
+        if key in seen:
+            continue
+        seen.add(key)
         results.append({"count": int(count), "status": status.lower()})
     return results
 

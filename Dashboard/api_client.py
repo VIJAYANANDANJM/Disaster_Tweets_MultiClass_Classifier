@@ -19,6 +19,74 @@ def _make_json_serializable(obj: Any) -> Any:
     return obj
 
 
+def _as_list(value: Any) -> List[Any]:
+    """Return value as a list for consistent actionable-info processing."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, tuple):
+        return list(value)
+    return [value]
+
+
+def _normalize_actionable_info(actionable_info: Any) -> Dict[str, Any]:
+    """
+    Normalize actionable info keys to backend schema keys.
+    Accepts snake_case and camelCase keys.
+    """
+    if not isinstance(actionable_info, dict):
+        return {}
+
+    normalized: Dict[str, Any] = {}
+
+    locations = [str(x).strip() for x in _as_list(actionable_info.get("locations")) if str(x).strip()]
+    needs = [str(x).strip() for x in _as_list(actionable_info.get("needs")) if str(x).strip()]
+    damage_type = [
+        str(x).strip()
+        for x in _as_list(actionable_info.get("damageType") or actionable_info.get("damage_type"))
+        if str(x).strip()
+    ]
+    time_mentions = [
+        str(x).strip()
+        for x in _as_list(actionable_info.get("timeMentions") or actionable_info.get("time_mentions"))
+        if str(x).strip()
+    ]
+
+    people_raw = _as_list(actionable_info.get("peopleCount") or actionable_info.get("people_count"))
+    people_count = []
+    for item in people_raw:
+        if isinstance(item, dict):
+            count = item.get("count")
+            status = item.get("status")
+            entry = {}
+            if count is not None:
+                entry["count"] = _make_json_serializable(count)
+            if status is not None and str(status).strip():
+                entry["status"] = str(status).strip()
+            if entry:
+                people_count.append(entry)
+        elif str(item).strip():
+            people_count.append({"status": str(item).strip()})
+
+    location_note = actionable_info.get("locationNote") or actionable_info.get("location_note")
+    if location_note is not None and str(location_note).strip():
+        normalized["locationNote"] = str(location_note).strip()
+
+    if locations:
+        normalized["locations"] = locations
+    if people_count:
+        normalized["peopleCount"] = people_count
+    if needs:
+        normalized["needs"] = needs
+    if damage_type:
+        normalized["damageType"] = damage_type
+    if time_mentions:
+        normalized["timeMentions"] = time_mentions
+
+    return normalized
+
+
 class APIClient:
     """Client for interacting with the backend API."""
     
@@ -134,7 +202,8 @@ class APIClient:
             return False, f"Connection error: {str(e)}", None
     
     def update_tweet_classification(self, tweet_id: str, classification: Dict,
-                                   explanation: List, actionable_info: Dict) -> tuple[bool, str]:
+                                   explanation: List, actionable_info: Dict,
+                                   status: Optional[str] = None) -> tuple[bool, str]:
         """
         Update tweet with classification results from local model.
         Converts float32/numpy types to native Python for JSON serialization.
@@ -162,8 +231,10 @@ class APIClient:
             payload = {
                 "classification": _make_json_serializable(classification or {}),
                 "explanation": explanation_serializable,
-                "actionableInfo": _make_json_serializable(actionable_info or {})
+                "actionableInfo": _make_json_serializable(_normalize_actionable_info(actionable_info or {}))
             }
+            if status:
+                payload["status"] = status
 
             response = self.session.put(
                 f"{self.base_url}/tweets/{tweet_id}/classify",

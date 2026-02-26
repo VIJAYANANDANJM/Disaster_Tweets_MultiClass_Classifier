@@ -1,0 +1,7 @@
+{
+  "num_total_tweets": 57,
+  "num_labeled_tweets": 32,
+  "accuracy_labeled": 0.875,
+  "macro_f1_labeled": 0.8713725490196078,
+  "weighted_f1_labeled": 0.8718137254901962
+}

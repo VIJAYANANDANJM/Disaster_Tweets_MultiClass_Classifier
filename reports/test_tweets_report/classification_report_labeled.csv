@@ -1,0 +1,9 @@
+,precision,recall,f1-score,support
+Affected Individuals,1.0,0.6666666666666666,0.8,6.0
+Infrastructure Damage,0.875,1.0,0.9333333333333333,7.0
+Not Humanitarian,1.0,1.0,1.0,6.0
+Other Information,1.0,0.6666666666666666,0.8,6.0
+Rescue/Donation,0.7,1.0,0.8235294117647058,7.0
+accuracy,0.875,0.875,0.875,0.875
+macro avg,0.915,0.8666666666666666,0.8713725490196078,32.0
+weighted avg,0.90703125,0.875,0.8718137254901962,32.0
