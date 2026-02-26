@@ -1,0 +1,166 @@
+# Test Tweets for Disaster Classification System
+# These tweets are designed to work perfectly with the classification model
+# Format: Each tweet is on a new line
+# Categories: affected_individuals, infrastructure_and_utility_damage, not_humanitarian, other_relevant_information, rescue_volunteering_or_donation
+
+# ============================================
+# CATEGORY 0: AFFECTED INDIVIDUALS
+# ============================================
+
+Flooding in downtown Houston has left 15 people injured and 3 missing. Need immediate rescue assistance.
+
+5 dead and 12 injured after earthquake hit Mexico City. Families need shelter and medical aid urgently.
+
+Wildfire evacuation in California - 20 families trapped in their homes. Need evacuation help now.
+
+Hurricane damage in Florida: 8 people killed, 30 injured. Medical supplies and food needed immediately.
+
+3 children missing after flash flood in Texas. Search and rescue teams needed urgently.
+
+10 people injured in building collapse in New York. Ambulance and medical help required.
+
+# ============================================
+# CATEGORY 1: INFRASTRUCTURE AND UTILITY DAMAGE
+# ============================================
+
+Major bridge collapsed on Highway 101 due to earthquake. Road completely blocked, no access to downtown.
+
+Power outage affecting entire neighborhood in Los Angeles. Electricity down for 3 hours now.
+
+Fire destroyed 5 buildings in downtown area. Roads blocked, traffic diverted.
+
+Flooding has damaged the main road connecting two cities. Highway closed indefinitely.
+
+Wildfire has destroyed power lines. Electricity out for 2000 homes in the area.
+
+Damaged water supply system after earthquake. No clean water available in affected areas.
+
+Bridge collapse on Route 66. Infrastructure severely damaged, repairs needed urgently.
+
+# ============================================
+# CATEGORY 2: NOT HUMANITARIAN
+# ============================================
+
+Just had the best pizza for lunch today! So delicious.
+
+Watching the new movie tonight, can't wait to see it.
+
+Beautiful sunset today, perfect weather for a walk.
+
+New restaurant opened downtown, food is amazing!
+
+Going to the beach this weekend, excited for vacation.
+
+Had a great day at work today, everything went smoothly.
+
+# ============================================
+# CATEGORY 3: OTHER RELEVANT INFORMATION
+# ============================================
+
+Weather update: Heavy rain expected tomorrow in the region. Stay safe everyone.
+
+Emergency services are monitoring the situation closely. Updates will be provided soon.
+
+Disaster preparedness meeting scheduled for next week. Community members welcome.
+
+Government announces new disaster relief fund for affected areas.
+
+Weather warning issued for coastal regions. High winds expected tonight.
+
+Emergency response teams are on standby. Situation being monitored 24/7.
+
+# ============================================
+# CATEGORY 4: RESCUE VOLUNTEERING OR DONATION
+# ============================================
+
+Volunteers needed for disaster relief efforts. Food and water donations accepted at community center.
+
+Donating medical supplies to help earthquake victims. Drop-off location: Red Cross center.
+
+Looking for volunteers to help with rescue operations. Contact local emergency services.
+
+Food drive organized for flood victims. Donations needed: canned food, water, blankets.
+
+Medical volunteers needed urgently. Doctors and nurses please report to emergency center.
+
+Donation center open 24/7 for hurricane relief. Accepting clothes, food, and medical supplies.
+
+Volunteer rescue team searching for missing people. Need more volunteers with experience.
+
+# ============================================
+# COMPLEX EXAMPLES WITH MULTIPLE ELEMENTS
+# ============================================
+
+Hurricane hit Miami yesterday - 25 injured, 2 dead. Bridge collapsed on Main Street. Need medical supplies and volunteers for rescue operations.
+
+Earthquake in San Francisco: 10 people trapped in collapsed building. Power lines down, water supply damaged. Emergency services need volunteers and donations.
+
+Wildfire spreading rapidly in California. 15 families evacuated, 3 missing. Roads blocked, power outage affecting 5000 homes. Donations needed for shelter and food.
+
+Flooding in downtown area - 8 people injured, 1 missing. Main bridge damaged, roads closed. Medical aid and rescue teams needed urgently.
+
+# ============================================
+# LOCATION-SPECIFIC EXAMPLES
+# ============================================
+
+Flooding in New York City has left 12 people injured. Need immediate help in Manhattan area.
+
+Earthquake in Los Angeles, California - 5 dead, 20 injured. Infrastructure damage reported.
+
+Wildfire in Texas - 3 families trapped. Need evacuation assistance in Houston area.
+
+Hurricane damage in Florida - 8 people missing. Search and rescue needed in Miami Beach.
+
+# ============================================
+# TIME-SPECIFIC EXAMPLES
+# ============================================
+
+Just now: Building collapse reported. 5 injured, need ambulance immediately.
+
+Today's earthquake left 10 people trapped. Rescue operations ongoing.
+
+Yesterday's flood damaged infrastructure. 3 bridges collapsed, roads blocked.
+
+This morning: Wildfire spreading. 15 families evacuated, need shelter now.
+
+2 hours ago: Power outage in downtown. Electricity still down, affecting thousands.
+
+# ============================================
+# NEEDS-SPECIFIC EXAMPLES
+# ============================================
+
+Disaster victims need food, water, and medical supplies urgently. 20 people affected.
+
+Shelter needed for 15 families after flood. Blankets and clothes donations welcome.
+
+Medical aid required - 8 injured people need immediate attention. Ambulance needed.
+
+Rescue operations ongoing. Need volunteers and supplies for affected area.
+
+# ============================================
+# PEOPLE COUNT EXAMPLES
+# ============================================
+
+3 people killed in building collapse. 12 injured, need medical help.
+
+5 missing after flash flood. Search and rescue teams needed.
+
+10 injured in earthquake. Medical supplies and ambulance required.
+
+2 dead, 15 injured in wildfire. Evacuation and medical aid needed.
+
+# ============================================
+# DAMAGE TYPE EXAMPLES
+# ============================================
+
+Bridge collapsed due to earthquake. Road completely blocked.
+
+Power lines destroyed by wildfire. Electricity out for entire neighborhood.
+
+Roads flooded and damaged. Highway closed indefinitely.
+
+Buildings destroyed in fire. Infrastructure severely damaged.
+
+# ============================================
+# END OF TEST TWEETS
+# ============================================
