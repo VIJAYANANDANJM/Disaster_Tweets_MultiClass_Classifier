@@ -5,7 +5,7 @@ const Tweet = require('../models/Tweet');
 // Create a new tweet (for manual input from dashboard)
 router.post('/create', async (req, res) => {
   try {
-    const { text, author, authorName, tweetId, createdAt, retweetCount, favoriteCount } = req.body;
+    const { text, author, authorName, tweetId, createdAt, retweetCount, favoriteCount, status } = req.body;
 
     if (!text || !author) {
       return res.status(400).json({
@@ -43,6 +43,7 @@ router.post('/create', async (req, res) => {
       createdAt: createdAt ? new Date(createdAt) : new Date(),
       retweetCount: retweetCount || 0,
       favoriteCount: favoriteCount || 0,
+      status: status || 'unverified',
       source: 'manual'
     });
 
@@ -70,6 +71,7 @@ router.get('/', async (req, res) => {
       labelId,
       author,
       source,
+      status,
       sortBy = 'createdAt',
       sortOrder = 'desc'
     } = req.query;
@@ -86,6 +88,10 @@ router.get('/', async (req, res) => {
 
     if (source) {
       query.source = source;
+    }
+
+    if (status) {
+      query.status = status;
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -153,8 +159,8 @@ router.put('/:id/classify', async (req, res) => {
       });
     }
 
-    // Update with classification data from desktop app
-    const { classification, explanation, actionableInfo } = req.body;
+    // FIXED: Destructured 'status' from req.body to ensure it gets saved
+    const { classification, explanation, actionableInfo, status } = req.body;
     
     if (classification) {
       tweet.classification = {
@@ -173,11 +179,16 @@ router.put('/:id/classify', async (req, res) => {
       tweet.actionableInfo = actionableInfo;
     }
 
+    // NEW: Explicitly update status if it is provided in the request
+    if (status) {
+      tweet.status = status;
+    }
+
     await tweet.save();
 
     res.json({
       success: true,
-      message: 'Classification saved successfully',
+      message: 'Classification and status updated successfully',
       tweet
     });
   } catch (error) {

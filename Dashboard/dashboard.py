@@ -2,19 +2,19 @@
 Main Dashboard Application
 Desktop app for tweet classification with XAI visualization.
 Gets tweets from database and allows manual input.
-Includes HITL (Human-In-The-Loop) Database Synchronization.
+Includes HITL (Human-In-The-Loop) Database Synchronization and Refresh logic.
 """
 import customtkinter as ctk
 from tkinter import ttk
 import threading
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 import uuid
 
-from Dashboard.api_client import APIClient
-from Dashboard.model_inference import ModelInference
-from Dashboard.token_highlighter import TokenHighlighter
-from Dashboard.config import (
+from api_client import APIClient
+from model_inference import ModelInference
+from token_highlighter import TokenHighlighter
+from config import (
     LABEL_DISPLAY_NAMES, LABEL_COLORS, MAX_TWEETS_PER_FETCH
 )
 
@@ -93,7 +93,7 @@ class ConnectionFrame(ctk.CTkFrame):
                 self.after(500, self.on_success)
             else:
                 self.status_label.configure(
-                    text="✗ Backend server not running. Please start the backend server first.",
+                    text="Backend server not running. Please start the backend server first.",
                     text_color="red"
                 )
                 self.retry_btn.pack()
@@ -136,7 +136,7 @@ class TweetInputFrame(ctk.CTkFrame):
             author_frame,
             text="Author:",
             font=ctk.CTkFont(size=12)
-        ).pack(side="left", padx=5)
+        ) .pack(side="left", padx=5)
         
         self.author_entry = ctk.CTkEntry(
             author_frame,
@@ -188,16 +188,17 @@ class TweetInputFrame(ctk.CTkFrame):
             text_color="yellow"
         )
         
-        # Create tweet object
+        # Create tweet object matching the new status schema
         tweet_data = {
             'text': text,
             'author': author,
             'authorName': author,
+            'authorId': author,
             'createdAt': datetime.now().isoformat(),
             'tweetId': str(uuid.uuid4()),
             'retweetCount': 0,
             'favoriteCount': 0,
-            'human_verified': False # Default state
+            'status': 'unverified'  # Default state before threshold check
         }
         
         # Call callback
@@ -227,11 +228,18 @@ class TweetCard(ctk.CTkFrame):
         """Setup tweet card UI."""
         # Label badge
         label_id = self.classification.get("predictedLabelId")
+        status = self.tweet_data.get('status', 'unverified')
+
         if label_id is not None:
             label_name = LABEL_DISPLAY_NAMES.get(label_id, "Unknown")
-            # If tweet was human verified, update the card label text
-            if self.tweet_data.get('human_verified'):
-                label_name += " (Verified)"
+            
+            # Show specific badge text based on status
+            if status == 'human_verified':
+                label_name += " (Human Verified)"
+            elif status == 'verified':
+                label_name += " (Auto Verified)"
+            else:
+                label_name += " (To Verify)"
                 
             label_color = LABEL_COLORS.get(label_id, "#95A5A6")
             
@@ -323,10 +331,11 @@ class TweetCard(ctk.CTkFrame):
 class TweetDetailFrame(ctk.CTkFrame):
     """Detailed tweet view with actionable info and token highlighting."""
     
-    def __init__(self, parent, token_highlighter, api_client):
+    def __init__(self, parent, token_highlighter, api_client, dashboard_ref):
         super().__init__(parent)
         self.token_highlighter = token_highlighter
         self.api_client = api_client # For DB syncing
+        self.dashboard = dashboard_ref # Reference to trigger global refresh
         self.current_tweet = None
         self.current_classification = None
         self.verification_mode = False 
@@ -335,13 +344,18 @@ class TweetDetailFrame(ctk.CTkFrame):
     
     def setup_ui(self):
         """Setup detail view UI."""
-        # Title
+        # Header Container for Title and Refresh
+        header_container = ctk.CTkFrame(self, fg_color="transparent")
+        header_container.pack(fill="x", pady=10)
+
         title = ctk.CTkLabel(
-            self,
+            header_container,
             text="Tweet Details",
             font=ctk.CTkFont(size=20, weight="bold")
         )
-        title.pack(pady=10)
+        title.pack(side="left", padx=20)
+
+        
         
         # Scrollable frame for content
         self.scroll_frame = ctk.CTkScrollableFrame(self)
@@ -372,12 +386,12 @@ class TweetDetailFrame(ctk.CTkFrame):
         """Update the database via the API client when a human makes a choice."""
         def run_sync():
             try:
-                # We update the tweet's classification and its human_verified flag in the DB
                 self.api_client.update_tweet_classification(
                     tweet_data['tweetId'], 
                     tweet_data['classification'],
                     tweet_data.get('explanation', []),
-                    tweet_data.get('actionableInfo', {})
+                    tweet_data.get('actionableInfo', {}),
+                    status=tweet_data.get('status', 'verified')
                 )
             except Exception as e:
                 print(f"Error syncing to DB: {e}")
@@ -417,23 +431,20 @@ class TweetDetailFrame(ctk.CTkFrame):
 
         def submit_correction():
             selected_lid = choice_var.get()
-            # Update local state
-            tweet_data['human_verified'] = True
+            tweet_data['status'] = 'human_verified'
             if 'classification' in tweet_data:
                 tweet_data['classification']['predictedLabelId'] = selected_lid
+                tweet_data['classification']['predictedLabel'] = LABEL_DISPLAY_NAMES.get(selected_lid, "Unknown")
             
             # Sync to Database
             self.sync_to_db(tweet_data)
             
             # Sync to Local Feedback file
             save_feedback(tweet_data.get('text', ''), selected_lid)
-            
             popup.destroy()
-            # Refresh current view
             self.display_tweet(tweet_data)
-            # Notify main to refresh list
-            if hasattr(self.master.master.master, 'display_tweets'):
-                self.master.master.master.display_tweets()
+            # Refresh lists
+            self.dashboard.display_tweets()
         
         ctk.CTkButton(
             popup, 
@@ -462,14 +473,21 @@ class TweetDetailFrame(ctk.CTkFrame):
         label_name = LABEL_DISPLAY_NAMES.get(label_id, "Unknown") if label_id is not None else "Not Classified"
         label_color = LABEL_COLORS.get(label_id, "#95A5A6")
         
-        # Status display
+        # Status display logic
+        current_status = tweet_data.get('status', 'unverified')
         status_text = "Model Classification"
-        if tweet_data.get('human_verified'):
-            status_text += " (Verified & Stored)"
+        if current_status == 'human_verified':
+            status_text += " (Human Verified & Stored)"
+        elif current_status == 'verified':
+            status_text += " (Auto Verified)"
+        else:
+            status_text += " (Requires Human Review)"
             
         info_title = ctk.CTkLabel(self.info_frame, text=status_text, font=ctk.CTkFont(size=16, weight="bold"))
-        if tweet_data.get('human_verified'):
+        if current_status != 'unverified':
             info_title.configure(text_color="#27AE60") # Green
+        else:
+            info_title.configure(text_color="#E67E22") # Orange
         info_title.pack(anchor="w", padx=10, pady=5)
         
         label_badge = ctk.CTkFrame(self.info_frame, fg_color=label_color, corner_radius=5)
@@ -478,7 +496,7 @@ class TweetDetailFrame(ctk.CTkFrame):
         ctk.CTkLabel(label_badge, text=label_name, font=ctk.CTkFont(size=14, weight="bold"), text_color="white").pack(pady=8)
         
         # HUMAN VERIFICATION BUTTONS
-        if self.verification_mode:
+        if self.verification_mode and current_status == 'unverified':
             verify_box = ctk.CTkFrame(self.info_frame, fg_color="#333333", border_width=1)
             verify_box.pack(fill="x", padx=10, pady=10)
             
@@ -488,15 +506,13 @@ class TweetDetailFrame(ctk.CTkFrame):
             btn_row.pack(pady=5)
 
             def on_accept():
-                tweet_data['human_verified'] = True
-                # Push to DB
+                tweet_data['status'] = 'human_verified'
                 self.sync_to_db(tweet_data)
                 save_feedback(tweet_data.get('text', ''), label_id)
                 accept_btn.configure(text="Synced ✓", state="disabled")
                 reject_btn.pack_forget()
-                info_title.configure(text="Model Classification (Verified & Stored)", text_color="#27AE60")
-                if hasattr(self.master.master.master, 'display_tweets'):
-                    self.master.master.master.display_tweets()
+                info_title.configure(text="Model Classification (Human Verified & Stored)", text_color="#27AE60")
+                self.dashboard.display_tweets()
 
             accept_btn = ctk.CTkButton(btn_row, text="Accept", fg_color="#27AE60", width=120, command=on_accept)
             accept_btn.pack(side="left", padx=10)
@@ -509,10 +525,10 @@ class TweetDetailFrame(ctk.CTkFrame):
                 command=lambda: self.open_correction_popup(tweet_data, label_id)
             )
             reject_btn.pack(side="left", padx=10)
-            
-            if tweet_data.get('human_verified'):
-                accept_btn.configure(text="Synced ✓", state="disabled")
-                reject_btn.pack_forget()
+        
+        elif current_status == 'human_verified' or current_status == 'verified':
+             sync_msg = ctk.CTkLabel(self.info_frame, text="✓ Classification Sync Complete", text_color="#27AE60", font=ctk.CTkFont(size=11))
+             sync_msg.pack(pady=5)
         
         # Metadata
         meta_frame = ctk.CTkFrame(self.info_frame, fg_color="transparent")
@@ -552,7 +568,7 @@ class TweetDetailFrame(ctk.CTkFrame):
         actionable_info = tweet_data.get("actionableInfo")
         if actionable_info:
             ctk.CTkLabel(self.actionable_frame, text="Actionable Extraction", font=ctk.CTkFont(size=16, weight="bold")).pack(anchor="w", padx=10, pady=5)
-            for key, emoji in [("locations", "📍"), ("needs", "🆘"), ("damage_type", "💥")]:
+            for key, emoji in [("locations", "📍"), ("needs", "🆘"), ("damageType", "💥")]:
                 vals = actionable_info.get(key)
                 if vals:
                     ctk.CTkLabel(self.actionable_frame, text=f"{emoji} {key.title()}: {', '.join(vals)}", font=ctk.CTkFont(size=12)).pack(anchor="w", padx=20)
@@ -593,6 +609,17 @@ class MainDashboard(ctk.CTk):
         top_bar.pack(fill="x", padx=10, pady=10)
         
         ctk.CTkLabel(top_bar, text="Disaster Tweet Classifier", font=ctk.CTkFont(size=24, weight="bold")).pack(side="left", padx=20)
+        
+        # REFRESH DATABASE BUTTON
+        self.refresh_btn = ctk.CTkButton(
+            top_bar, 
+            text="🔄 Refresh Database", 
+            width=150,
+            fg_color="#34495E",
+            hover_color="#2C3E50",
+            command=self.load_tweets_from_db
+        )
+        self.refresh_btn.pack(side="right", padx=20)
         
         self.content_area = ctk.CTkFrame(self.dashboard_frame, fg_color="transparent")
         self.content_area.pack(fill="both", expand=True, padx=10, pady=(0, 10))
@@ -642,7 +669,8 @@ class MainDashboard(ctk.CTk):
         right_panel = ctk.CTkFrame(self.content_area)
         right_panel.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
         
-        self.detail_frame = TweetDetailFrame(right_panel, self.token_highlighter, self.api_client)
+        # Pass self reference for the Detail Refresh button to work
+        self.detail_frame = TweetDetailFrame(right_panel, self.token_highlighter, self.api_client, self)
         self.detail_frame.pack(fill="both", expand=True)
 
     def show_connection(self):
@@ -686,6 +714,9 @@ class MainDashboard(ctk.CTk):
         text = tweet_data.get('text', '')
         result = self.model_inference.classify_tweet(text)
         if result:
+            confidence = max(result['confidence_scores'])
+            status = 'verified' if confidence >= CONFIDENCE_THRESHOLD else 'unverified'
+            
             tweet_data['classification'] = {
                 'predictedLabelId': result['predicted_label_id'],
                 'predictedLabel': result['predicted_label'],
@@ -694,6 +725,7 @@ class MainDashboard(ctk.CTk):
             }
             tweet_data['explanation'] = result.get('explanation', [])
             tweet_data['actionableInfo'] = result.get('actionable_info', {})
+            tweet_data['status'] = status
     
     def save_tweet_to_db(self, tweet_data):
         try:
@@ -701,54 +733,85 @@ class MainDashboard(ctk.CTk):
         except Exception as e: print(f"DB Error: {e}")
     
     def load_tweets_from_db(self):
+        """Fetch all changes from DB and restart filtering/classification."""
+        # Visual feedback
+        if hasattr(self, 'refresh_btn'):
+            self.refresh_btn.configure(text="⌛ Syncing...", state="disabled")
+
         def load_thread():
             success, _, tweets, _ = self.api_client.get_tweets(page=1, limit=MAX_TWEETS_PER_FETCH)
-            if success: self.classify_tweets_locally(tweets)
+            if success: 
+                self.classify_tweets_locally(tweets)
+            
+            # Reset UI button
+            if hasattr(self, 'refresh_btn'):
+                self.after(500, lambda: self.refresh_btn.configure(text="🔄 Refresh Database", state="normal"))
+
         threading.Thread(target=load_thread, daemon=True).start()
     
     def classify_tweets_locally(self, tweets):
+        """Iterate loaded tweets and update status based on threshold."""
         if not self.model_inference: self.model_inference = ModelInference()
         
         processed = []
         for tweet in tweets:
-            if 'human_verified' not in tweet:
-                tweet['human_verified'] = False
+            if 'status' not in tweet:
+                tweet['status'] = 'unverified'
 
-            if not tweet.get('classification') or tweet['classification'].get('predictedLabelId') is None:
-                text = tweet.get('text', '')
-                res = self.model_inference.classify_tweet(text)
-                if res:
-                    tweet['classification'] = {
-                        'predictedLabelId': res['predicted_label_id'],
-                        'confidenceScores': res['confidence_scores']
-                    }
-                    tweet['explanation'] = res.get('explanation', [])
-                    tweet['actionableInfo'] = res.get('actionable_info', {})
-                    # Sync initial automated classification back to DB
-                    threading.Thread(target=lambda t=tweet: self.api_client.update_tweet_classification(
-                        t['tweetId'], t['classification'], t.get('explanation', []), t.get('actionableInfo', {})
-                    ), daemon=True).start()
+            class_data = tweet.get('classification', {})
+            scores = class_data.get('confidenceScores', [])
+            
+            # Logic for items that haven't been reviewed by human or auto-verified yet
+            if tweet['status'] == 'unverified':
+                if not scores or class_data.get('predictedLabelId') is None:
+                    res = self.model_inference.classify_tweet(tweet.get('text', ''))
+                    if res:
+                        confidence = max(res['confidence_scores'])
+                        status = 'verified' if confidence >= CONFIDENCE_THRESHOLD else 'unverified'
+                        
+                        tweet['classification'] = {
+                            'predictedLabelId': res['predicted_label_id'],
+                            'predictedLabel': res['predicted_label'],
+                            'confidenceScores': res['confidence_scores']
+                        }
+                        tweet['explanation'] = res.get('explanation', [])
+                        tweet['actionableInfo'] = res.get('actionable_info', {})
+                        tweet['status'] = status
+                        
+                        if status == 'verified':
+                            threading.Thread(target=lambda t=tweet: self.api_client.update_tweet_classification(
+                                t['tweetId'], t['classification'], t.get('explanation', []), t.get('actionableInfo', {}), status='verified'
+                            ), daemon=True).start()
+                else:
+                    confidence = max(scores)
+                    if confidence >= CONFIDENCE_THRESHOLD:
+                        tweet['status'] = 'verified'
+                        threading.Thread(target=lambda t=tweet: self.api_client.update_tweet_classification(
+                            t['tweetId'], t['classification'], t.get('explanation', []), t.get('actionableInfo', {}), status='verified'
+                        ), daemon=True).start()
+            
             processed.append(tweet)
         
         self.tweets = processed
         self.after(0, self.display_tweets)
 
     def display_tweets(self):
+        """Display filtered tweets based on current UI state."""
         for widget in self.tweet_list_frame.winfo_children(): widget.destroy()
         
         display_list = self.tweets
         
         if self.hitl_mode:
+            display_list = [t for t in self.tweets if t.get('status') == 'unverified']
+        elif self.verified_filter_mode:
+            display_list = [t for t in self.tweets if t.get('status') == 'human_verified']
+        elif self.current_filter is not None:
+            # Show Auto-verified OR Human-verified for the specific category
             display_list = [
                 t for t in self.tweets 
-                if t.get('classification', {}).get('confidenceScores') and 
-                max(t['classification']['confidenceScores']) < CONFIDENCE_THRESHOLD and
-                not t.get('human_verified', False)
+                if t.get('classification', {}).get('predictedLabelId') == self.current_filter 
+                and (t.get('status') == 'verified' or t.get('status') == 'human_verified')
             ]
-        elif self.verified_filter_mode:
-            display_list = [t for t in self.tweets if t.get('human_verified', False)]
-        elif self.current_filter is not None:
-            display_list = [t for t in self.tweets if t.get('classification', {}).get('predictedLabelId') == self.current_filter]
         
         for tweet in display_list:
             card = TweetCard(self.tweet_list_frame, tweet, tweet.get('classification', {}), lambda t=tweet: self.select_tweet(t))
