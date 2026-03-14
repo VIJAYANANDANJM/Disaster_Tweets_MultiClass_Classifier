@@ -1,0 +1,7 @@
+model,f1
+CNN,0.842
+fastText,0.794
+BERT,0.879
+DistilBERT,0.863
+RoBERTa,0.87
+XtremeDistil ,0.872622079

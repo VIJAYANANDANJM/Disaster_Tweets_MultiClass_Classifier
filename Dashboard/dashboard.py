@@ -36,6 +36,7 @@ class ConnectionFrame(ctk.CTkFrame):
         super().__init__(parent)
         self.on_success = on_success_callback
         self.api_client = APIClient()
+        self._check_result = None  # thread-safe flag
         
         self.setup_ui()
         
@@ -44,7 +45,6 @@ class ConnectionFrame(ctk.CTkFrame):
     
     def setup_ui(self):
         """Setup connection UI components."""
-        # Title
         title = ctk.CTkLabel(
             self,
             text="Disaster Tweet Classification Dashboard",
@@ -52,7 +52,6 @@ class ConnectionFrame(ctk.CTkFrame):
         )
         title.pack(pady=30)
         
-        # Subtitle
         subtitle = ctk.CTkLabel(
             self,
             text="Connecting to backend server...",
@@ -61,7 +60,6 @@ class ConnectionFrame(ctk.CTkFrame):
         )
         subtitle.pack(pady=10)
         
-        # Status label
         self.status_label = ctk.CTkLabel(
             self,
             text="Checking connection...",
@@ -69,7 +67,6 @@ class ConnectionFrame(ctk.CTkFrame):
         )
         self.status_label.pack(pady=10)
         
-        # Retry button
         self.retry_btn = ctk.CTkButton(
             self,
             text="Retry Connection",
@@ -79,26 +76,33 @@ class ConnectionFrame(ctk.CTkFrame):
             font=ctk.CTkFont(size=14)
         )
         self.retry_btn.pack(pady=20)
-        self.retry_btn.pack_forget()  # Hide initially
+        self.retry_btn.pack_forget()
     
     def check_backend_status(self):
-        """Check if backend server is running."""
+        """Check if backend server is running (thread-safe polling)."""
+        self._check_result = None
+
         def check_thread():
-            if self.api_client.check_health():
-                self.status_label.configure(
-                    text="Backend server connected",
-                    text_color="green"
-                )
-                self.retry_btn.pack_forget()
-                self.after(500, self.on_success)
-            else:
-                self.status_label.configure(
-                    text="Backend server not running. Please start the backend server first.",
-                    text_color="red"
-                )
-                self.retry_btn.pack()
-        
+            self._check_result = self.api_client.check_health()
+
         threading.Thread(target=check_thread, daemon=True).start()
+        self._poll_result()
+
+    def _poll_result(self):
+        """Poll for connection result from main thread."""
+        if self._check_result is None:
+            self.after(200, self._poll_result)
+            return
+        if self._check_result:
+            self.status_label.configure(text="Backend server connected", text_color="green")
+            self.retry_btn.pack_forget()
+            self.after(500, self.on_success)
+        else:
+            self.status_label.configure(
+                text="Backend server not running. Please start the backend server first.",
+                text_color="red"
+            )
+            self.retry_btn.pack()
 
 
 class TweetInputFrame(ctk.CTkFrame):
@@ -650,76 +654,392 @@ class TweetDetailFrame(ctk.CTkFrame):
                     ).pack(anchor="w", padx=20, pady=(4, 2))
 
 
+
+class GeoAnalysisView(ctk.CTkFrame):
+    """Geospatial Temporal Aggregation view — shows location clusters with 5-class breakdown."""
+
+    SEVERITY_COLORS = {
+        "CRITICAL": "#E74C3C", "HIGH": "#E67E22", "MEDIUM": "#F39C12",
+        "LOW": "#27AE60", "UNCERTAIN": "#8E44AD", "UNKNOWN": "#95A5A6",
+        "NONE": "#95A5A6", "PENDING": "#3498DB",
+    }
+    STATUS_ICONS = {
+        "confirmed_event": "✅", "active_event": "🚨", "recovery_phase": "🔄",
+        "early_signal": "📡", "ambiguous_needs_review": "⚠️", "no_disaster": "✔️",
+        "low_confidence_cluster": "❓", "insufficient_data": "➖",
+        "suspicious_single_source": "🚫", "location_uncertain": "📍",
+        "unclassified": "⏳",
+    }
+    LABEL_EMOJIS = {0: "🔴", 1: "🟠", 2: "⚪", 3: "🔵", 4: "🟢"}
+
+    def __init__(self, parent, api_client, back_callback):
+        super().__init__(parent)
+        self.api_client = api_client
+        self.back_callback = back_callback
+        self.reports = []
+        self.configure(fg_color="transparent")
+        self._build_ui()
+
+    def _build_ui(self):
+        # Top bar
+        top = ctk.CTkFrame(self, height=60)
+        top.pack(fill="x", padx=10, pady=(10, 5))
+        ctk.CTkLabel(top, text="🌍  Geo Analysis",
+                     font=ctk.CTkFont(size=22, weight="bold")).pack(side="left", padx=20)
+        ctk.CTkButton(top, text="← Back to Dashboard", width=160,
+                      fg_color="#34495E", hover_color="#2C3E50",
+                      command=self.back_callback).pack(side="right", padx=10)
+        self.refresh_geo_btn = ctk.CTkButton(top, text="🔄 Refresh Clusters", width=160,
+                                             fg_color="#2980B9", hover_color="#3498DB",
+                                             command=self.load_clusters)
+        self.refresh_geo_btn.pack(side="right", padx=5)
+        self.status_label = ctk.CTkLabel(top, text="Click 'Refresh Clusters' to load",
+                                         font=ctk.CTkFont(size=12), text_color="gray")
+        self.status_label.pack(side="right", padx=15)
+
+        # Main split: left cluster list | right detail
+        body = ctk.CTkFrame(self, fg_color="transparent")
+        body.pack(fill="both", expand=True, padx=10, pady=5)
+        body.grid_columnconfigure(0, weight=3)
+        body.grid_columnconfigure(1, weight=7)
+        body.grid_rowconfigure(0, weight=1)
+
+        left = ctk.CTkFrame(body)
+        left.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
+        ctk.CTkLabel(left, text="Location Clusters",
+                     font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=10, pady=8)
+        self.cluster_list = ctk.CTkScrollableFrame(left)
+        self.cluster_list.pack(fill="both", expand=True, padx=5, pady=5)
+
+        right = ctk.CTkFrame(body)
+        right.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+        self.detail_scroll = ctk.CTkScrollableFrame(right)
+        self.detail_scroll.pack(fill="both", expand=True, padx=5, pady=5)
+        self._show_placeholder()
+
+    def _show_placeholder(self):
+        for w in self.detail_scroll.winfo_children():
+            w.destroy()
+        ctk.CTkLabel(self.detail_scroll, text="Select a location cluster to view details",
+                     font=ctk.CTkFont(size=14), text_color="gray").pack(expand=True, pady=100)
+
+    def load_clusters(self):
+        """Fetch ALL tweets, classify any unclassified ones, then aggregate."""
+        self.status_label.configure(text="Loading tweets...", text_color="#3498DB")
+        self.refresh_geo_btn.configure(state="disabled")
+
+        # Shared state between worker thread and main-thread poll
+        self._geo_status = "loading"
+        self._geo_status_text = "Loading tweets..."
+        self._geo_reports = None
+        self._geo_error = None
+        self._geo_done = False
+
+        def worker():
+            try:
+                from Dashboard.geospatial_aggregator import GeoSpatialAggregator
+                from Dashboard.model_inference import ModelInference
+
+                success, msg, tweets = self.api_client.get_all_tweets_for_geo()
+                if not success or not tweets:
+                    self._geo_error = f"Load failed: {msg}"
+                    self._geo_done = True
+                    return
+
+                total = len(tweets)
+                self._geo_status_text = f"Fetched {total} tweets. Classifying..."
+
+                # Classify unclassified tweets
+                unclassified = [t for t in tweets
+                                if t.get("classification", {}).get("predictedLabelId") is None]
+                if unclassified:
+                    model = ModelInference()
+                    for i, tweet in enumerate(unclassified):
+                        text = tweet.get("text", "")
+                        if not text:
+                            continue
+                        result = model.classify_tweet(text)
+                        if result:
+                            tweet["classification"] = {
+                                "predictedLabelId": result["predicted_label_id"],
+                                "predictedLabel": result["predicted_label"],
+                                "confidenceScores": result["confidence_scores"],
+                            }
+                            if result.get("actionable_info"):
+                                tweet["actionableInfo"] = result["actionable_info"]
+                        if (i + 1) % 10 == 0 or i == len(unclassified) - 1:
+                            self._geo_status_text = f"Classifying {i+1}/{len(unclassified)} tweets..."
+
+                self._geo_status_text = "Aggregating clusters..."
+                aggregator = GeoSpatialAggregator(min_cluster_size=1)
+                reports = aggregator.analyze_all_clusters(tweets)
+                self._geo_reports = reports
+            except Exception as e:
+                self._geo_error = str(e)
+            finally:
+                self._geo_done = True
+
+        threading.Thread(target=worker, daemon=True).start()
+        self._poll_geo()
+
+    def _poll_geo(self):
+        """Main-thread poller for geo worker progress."""
+        # Update status text from worker
+        self.status_label.configure(text=self._geo_status_text, text_color="#F39C12")
+
+        if not self._geo_done:
+            self.after(300, self._poll_geo)
+            return
+
+        # Worker finished
+        self.refresh_geo_btn.configure(state="normal")
+        if self._geo_error:
+            self.status_label.configure(text=f"Error: {self._geo_error}", text_color="red")
+        elif self._geo_reports is not None:
+            self.reports = self._geo_reports
+            self._render_clusters(self._geo_reports)
+        else:
+            self.status_label.configure(text="No data", text_color="gray")
+
+    def _render_clusters(self, reports):
+        for w in self.cluster_list.winfo_children():
+            w.destroy()
+        if not reports:
+            ctk.CTkLabel(self.cluster_list, text="No clusters found.",
+                         font=ctk.CTkFont(size=13), text_color="gray").pack(pady=20)
+            self.status_label.configure(text="No clusters", text_color="gray")
+            return
+        self.status_label.configure(text=f"{len(reports)} clusters loaded", text_color="#2ECC71")
+        for report in reports:
+            self._make_cluster_card(report)
+        if reports:
+            self._show_detail(reports[0])
+
+    def _make_cluster_card(self, report):
+        severity = report.get("severity", "UNKNOWN")
+        sev_color = self.SEVERITY_COLORS.get(severity, "#95A5A6")
+        status = report.get("status", "")
+        icon = self.STATUS_ICONS.get(status, "📌")
+
+        card = ctk.CTkFrame(self.cluster_list, border_width=1,
+                            border_color=sev_color, corner_radius=8)
+        card.pack(fill="x", padx=5, pady=4)
+
+        top_row = ctk.CTkFrame(card, fg_color="transparent")
+        top_row.pack(fill="x", padx=8, pady=(6, 2))
+        ctk.CTkLabel(top_row, text=f"{icon}  {report['location']}",
+                     font=ctk.CTkFont(size=13, weight="bold")).pack(side="left")
+        ctk.CTkLabel(top_row, text=severity,
+                     font=ctk.CTkFont(size=10, weight="bold"),
+                     text_color=sev_color).pack(side="right")
+
+        total = report.get("total_tweets", 0)
+        authors = report.get("unique_authors", 0)
+        ctk.CTkLabel(card, text=f"{total} tweets · {authors} authors",
+                     font=ctk.CTkFont(size=11), text_color="gray").pack(anchor="w", padx=8, pady=(0, 4))
+
+        card.bind("<Button-1>", lambda e, r=report: self._show_detail(r))
+        for child in card.winfo_children():
+            child.bind("<Button-1>", lambda e, r=report: self._show_detail(r))
+            for grandchild in child.winfo_children():
+                grandchild.bind("<Button-1>", lambda e, r=report: self._show_detail(r))
+
+    def _show_detail(self, report):
+        for w in self.detail_scroll.winfo_children():
+            w.destroy()
+
+        severity = report.get("severity", "UNKNOWN")
+        sev_color = self.SEVERITY_COLORS.get(severity, "#95A5A6")
+        status = report.get("status", "")
+        icon = self.STATUS_ICONS.get(status, "📌")
+
+        # Header
+        ctk.CTkLabel(self.detail_scroll, text=f"{icon}  {report['location']}",
+                     font=ctk.CTkFont(size=20, weight="bold")).pack(anchor="w", padx=10, pady=(12, 2))
+
+        # Severity + urgency + case badges
+        badge_row = ctk.CTkFrame(self.detail_scroll, fg_color="transparent")
+        badge_row.pack(anchor="w", padx=10, pady=4)
+
+        ctk.CTkLabel(badge_row, text="Severity:", font=ctk.CTkFont(size=11),
+                     text_color="gray").pack(side="left", padx=(0, 2))
+        ctk.CTkLabel(badge_row, text=f"  {severity}  ",
+                     font=ctk.CTkFont(size=12, weight="bold"),
+                     text_color="white", fg_color=sev_color, corner_radius=6).pack(side="left", padx=(0, 10))
+
+        urgency = report.get("urgency", "")
+        ctk.CTkLabel(badge_row, text="Urgency:", font=ctk.CTkFont(size=11),
+                     text_color="gray").pack(side="left", padx=(0, 2))
+        ctk.CTkLabel(badge_row, text=f"  {urgency}  ",
+                     font=ctk.CTkFont(size=12), text_color="white",
+                     fg_color="#34495E", corner_radius=6).pack(side="left", padx=(0, 10))
+
+        # Case name badge
+        case_name = status.replace("_", " ").title()
+        ctk.CTkLabel(badge_row, text="Case:", font=ctk.CTkFont(size=11),
+                     text_color="gray").pack(side="left", padx=(0, 2))
+        ctk.CTkLabel(badge_row, text=f"  {case_name}  ",
+                     font=ctk.CTkFont(size=12), text_color="white",
+                     fg_color="#7D3C98", corner_radius=6).pack(side="left")
+
+        # Status reason
+        ctk.CTkLabel(self.detail_scroll, text=report.get("status_reason", ""),
+                     font=ctk.CTkFont(size=12), text_color="#BDC3C7",
+                     wraplength=700, justify="left").pack(anchor="w", padx=10, pady=(2, 8))
+
+        # Stats row
+        stats_frame = ctk.CTkFrame(self.detail_scroll)
+        stats_frame.pack(fill="x", padx=10, pady=4)
+        for label, value in [
+            ("Tweets", str(report.get("total_tweets", 0))),
+            ("Classified", str(report.get("classified_count", 0))),
+            ("Authors", str(report.get("unique_authors", 0))),
+            ("Humanitarian", f"{report.get('humanitarian_percentage', 0):.0f}%"),
+            ("Avg Conf", f"{report.get('avg_confidence', 0):.0%}"),
+        ]:
+            box = ctk.CTkFrame(stats_frame)
+            box.pack(side="left", padx=6, pady=6)
+            ctk.CTkLabel(box, text=value, font=ctk.CTkFont(size=18, weight="bold")).pack(pady=(6, 0))
+            ctk.CTkLabel(box, text=label, font=ctk.CTkFont(size=10), text_color="gray").pack(pady=(0, 6), padx=12)
+
+        # 5-Class Distribution
+        ctk.CTkLabel(self.detail_scroll, text="5-Class Distribution",
+                     font=ctk.CTkFont(size=15, weight="bold")).pack(anchor="w", padx=10, pady=(14, 4))
+        label_dist = report.get("label_distribution", {})
+        for lid in range(5):
+            info = label_dist.get(lid, label_dist.get(str(lid), {}))
+            if not info:
+                continue
+            count = info.get("count", 0)
+            pct = info.get("percentage", 0.0)
+            color = LABEL_COLORS.get(lid, "#666")
+            emoji = self.LABEL_EMOJIS.get(lid, "")
+            name = LABEL_DISPLAY_NAMES.get(lid, f"Label {lid}")
+
+            row = ctk.CTkFrame(self.detail_scroll, fg_color="transparent")
+            row.pack(fill="x", padx=10, pady=2)
+            ctk.CTkLabel(row, text=f"{emoji} {name}", font=ctk.CTkFont(size=12),
+                         width=200, anchor="w").pack(side="left")
+            bar_bg = ctk.CTkFrame(row, height=16, fg_color="#2C3E50", corner_radius=4)
+            bar_bg.pack(side="left", fill="x", expand=True, padx=(6, 8))
+            bar_bg.pack_propagate(False)
+            fill_w = max(4, int(pct * 4))
+            if pct > 0:
+                ctk.CTkFrame(bar_bg, fg_color=color, corner_radius=4,
+                             width=fill_w, height=16).pack(side="left", fill="y")
+            ctk.CTkLabel(row, text=f"{count} ({pct:.1f}%)", font=ctk.CTkFont(size=12),
+                         width=80, anchor="e").pack(side="left")
+
+        # Combined Actionable Info
+        cai = report.get("combined_actionable_info", {})
+        if any([cai.get("locations"), cai.get("needs"), cai.get("damage_types"), cai.get("total_people_affected")]):
+            ctk.CTkLabel(self.detail_scroll, text="Combined Actionable Intelligence",
+                         font=ctk.CTkFont(size=15, weight="bold")).pack(anchor="w", padx=10, pady=(14, 4))
+            info_rows = [
+                ("📍 Locations", ", ".join(cai.get("locations", []))),
+                ("👥 People", str(cai.get("total_people_affected", 0)) + " affected" if cai.get("total_people_affected") else ""),
+                ("🆘 Needs", ", ".join(cai.get("needs", []))),
+                ("💥 Damage", ", ".join(cai.get("damage_types", []))),
+                ("⏰ Time", ", ".join(cai.get("time_mentions", []))),
+            ]
+            for label, value in info_rows:
+                if value:
+                    irow = ctk.CTkFrame(self.detail_scroll, fg_color="transparent")
+                    irow.pack(fill="x", padx=10, pady=2)
+                    ctk.CTkLabel(irow, text=label, font=ctk.CTkFont(size=12, weight="bold"),
+                                 width=120, anchor="w").pack(side="left")
+                    ctk.CTkLabel(irow, text=value, font=ctk.CTkFont(size=12),
+                                 wraplength=550, justify="left", anchor="w").pack(side="left", fill="x", expand=True)
+
+        # Recommended Actions
+        actions = report.get("recommended_actions", [])
+        if actions:
+            ctk.CTkLabel(self.detail_scroll, text="Recommended Actions",
+                         font=ctk.CTkFont(size=15, weight="bold")).pack(anchor="w", padx=10, pady=(14, 4))
+            for action in actions:
+                af = ctk.CTkFrame(self.detail_scroll, fg_color="#1A2530", corner_radius=6)
+                af.pack(fill="x", padx=10, pady=2)
+                ctk.CTkLabel(af, text=action, font=ctk.CTkFont(size=12),
+                             wraplength=650, justify="left", anchor="w").pack(anchor="w", padx=12, pady=6)
+
+        # Temporal
+        temporal = report.get("temporal", {})
+        if temporal.get("time_span_hours", 0) > 0:
+            burst_label = "BURST ⚡" if temporal.get("is_burst") else ("SPREAD 📆" if temporal.get("is_spread") else "NORMAL")
+            ctk.CTkLabel(self.detail_scroll,
+                         text=f"⏱ Time span: {temporal['time_span_hours']:.1f} hours  ({burst_label})",
+                         font=ctk.CTkFont(size=12), text_color="#BDC3C7").pack(anchor="w", padx=10, pady=(10, 12))
+
+
 class MainDashboard(ctk.CTk):
     """Main dashboard application with HITL Database Integration."""
-    
+
     def __init__(self):
         super().__init__()
-        
         self.title("Disaster Tweet Classification Dashboard")
         self.geometry("1400x900")
-        
         self.api_client = APIClient()
         self.token_highlighter = TokenHighlighter(min_color="#FFFFFF", max_color="#FF6B6B")
         self.model_inference = None
-        
         self.tweets = []
         self.current_filter = None
         self.hitl_mode = False
         self.verified_filter_mode = False
-        
         self.setup_ui()
         self.show_connection()
-    
+
     def setup_ui(self):
         self.main_container = ctk.CTkFrame(self)
         self.main_container.pack(fill="both", expand=True)
-        
         self.connection_frame = ConnectionFrame(self.main_container, self.on_connection_success)
         self.dashboard_frame = ctk.CTkFrame(self.main_container)
         self.setup_dashboard()
-    
+
     def setup_dashboard(self):
         """Setup dashboard UI with GRID layout."""
         top_bar = ctk.CTkFrame(self.dashboard_frame, height=70)
         top_bar.pack(fill="x", padx=10, pady=10)
-        
-        ctk.CTkLabel(top_bar, text="Disaster Tweet Classifier", font=ctk.CTkFont(size=24, weight="bold")).pack(side="left", padx=20)
-        
+
+        ctk.CTkLabel(top_bar, text="Disaster Tweet Classifier",
+                     font=ctk.CTkFont(size=24, weight="bold")).pack(side="left", padx=20)
+
+        # GEO ANALYSIS BUTTON
+        self.geo_btn = ctk.CTkButton(
+            top_bar, text="🌍 Geo Analysis", width=150,
+            fg_color="#1A5276", hover_color="#2980B9",
+            command=self.show_geo_analysis
+        )
+        self.geo_btn.pack(side="right", padx=5)
+
         # REFRESH DATABASE BUTTON
         self.refresh_btn = ctk.CTkButton(
-            top_bar, 
-            text="Refresh Database", 
-            width=150,
-            fg_color="#34495E",
-            hover_color="#2C3E50",
+            top_bar, text="Refresh Database", width=150,
+            fg_color="#34495E", hover_color="#2C3E50",
             command=self.load_tweets_from_db
         )
-        self.refresh_btn.pack(side="right", padx=20)
-        
+        self.refresh_btn.pack(side="right", padx=10)
+
         self.content_area = ctk.CTkFrame(self.dashboard_frame, fg_color="transparent")
         self.content_area.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-        
-        # Grid layout for proportions
         self.content_area.grid_columnconfigure(0, weight=4)
         self.content_area.grid_columnconfigure(1, weight=6)
         self.content_area.grid_rowconfigure(0, weight=1)
-        
+
         # LEFT PANEL
         left_panel = ctk.CTkFrame(self.content_area)
         left_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
-        
+
         self.tweet_input_frame = TweetInputFrame(left_panel, self.handle_manual_tweet)
         self.tweet_input_frame.pack(fill="x", padx=10, pady=10)
-        
+
         filter_box = ctk.CTkFrame(left_panel)
         filter_box.pack(fill="x", padx=10, pady=5)
-        
         filter_scroll = ctk.CTkScrollableFrame(filter_box, orientation="horizontal", height=50)
         filter_scroll.pack(fill="x", padx=5, pady=5)
-        
-        ctk.CTkButton(filter_scroll, text="All", width=80, command=lambda: self.filter_tweets(None)).pack(side="left", padx=5)
-        
+
+        ctk.CTkButton(filter_scroll, text="All", width=80,
+                      command=lambda: self.filter_tweets(None)).pack(side="left", padx=5)
+
         self.hitl_btn = ctk.CTkButton(
             filter_scroll, text="To Verify", fg_color="#D35400", hover_color="#E67E22",
             command=self.filter_hitl, width=100
@@ -734,29 +1054,45 @@ class MainDashboard(ctk.CTk):
 
         for lid, name in LABEL_DISPLAY_NAMES.items():
             ctk.CTkButton(
-                filter_scroll, text=name, width=120, fg_color=LABEL_COLORS.get(lid, "#95A5A6"),
+                filter_scroll, text=name, width=120,
+                fg_color=LABEL_COLORS.get(lid, "#95A5A6"),
                 command=lambda l=lid: self.filter_tweets(l)
             ).pack(side="left", padx=5)
-        
+
         self.tweet_list_frame = ctk.CTkScrollableFrame(left_panel)
         self.tweet_list_frame.pack(fill="both", expand=True, padx=10, pady=10)
-        
+
         # RIGHT PANEL
         right_panel = ctk.CTkFrame(self.content_area)
         right_panel.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
-        
-        # Pass self reference for the Detail Refresh button to work
         self.detail_frame = TweetDetailFrame(right_panel, self.token_highlighter, self.api_client, self)
         self.detail_frame.pack(fill="both", expand=True)
 
     def show_connection(self):
         self.dashboard_frame.pack_forget()
         self.connection_frame.pack(fill="both", expand=True)
-    
+
     def on_connection_success(self):
         self.connection_frame.pack_forget()
         self.dashboard_frame.pack(fill="both", expand=True)
         self.load_tweets_from_db()
+
+    def show_geo_analysis(self):
+        """Switch to the Geo Analysis view."""
+        self.dashboard_frame.pack_forget()
+        if not hasattr(self, "geo_view"):
+            self.geo_view = GeoAnalysisView(
+                self.main_container, self.api_client,
+                back_callback=self.show_main_dashboard
+            )
+        self.geo_view.pack(fill="both", expand=True)
+        self.geo_view.load_clusters()
+
+    def show_main_dashboard(self):
+        """Return from Geo Analysis to main dashboard."""
+        if hasattr(self, "geo_view"):
+            self.geo_view.pack_forget()
+        self.dashboard_frame.pack(fill="both", expand=True)
 
     def filter_hitl(self):
         self.hitl_mode = True
@@ -810,20 +1146,28 @@ class MainDashboard(ctk.CTk):
     
     def load_tweets_from_db(self):
         """Fetch all changes from DB and restart filtering/classification."""
-        # Visual feedback
         if hasattr(self, 'refresh_btn'):
             self.refresh_btn.configure(text="Syncing...", state="disabled")
+
+        self._db_load_done = False
 
         def load_thread():
             success, _, tweets, _ = self.api_client.get_tweets(page=1, limit=MAX_TWEETS_PER_FETCH)
             if success: 
                 self.classify_tweets_locally(tweets)
-            
-            # Reset UI button
-            if hasattr(self, 'refresh_btn'):
-                self.after(500, lambda: self.refresh_btn.configure(text="Refresh Database", state="normal"))
+            self._db_load_done = True
 
         threading.Thread(target=load_thread, daemon=True).start()
+        self._poll_db_load()
+
+    def _poll_db_load(self):
+        """Poll for DB load completion on the main thread."""
+        if not self._db_load_done:
+            self.after(300, self._poll_db_load)
+            return
+        if hasattr(self, 'refresh_btn'):
+            self.refresh_btn.configure(text="Refresh Database", state="normal")
+        self.display_tweets()
     
     def classify_tweets_locally(self, tweets):
         """Iterate loaded tweets and update status based on threshold."""
@@ -894,7 +1238,6 @@ class MainDashboard(ctk.CTk):
             processed.append(tweet)
         
         self.tweets = processed
-        self.after(0, self.display_tweets)
 
     def display_tweets(self):
         """Display filtered tweets based on current UI state."""

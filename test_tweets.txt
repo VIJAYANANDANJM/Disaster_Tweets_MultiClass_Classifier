@@ -1,5 +1,4 @@
 # Test Tweets for Disaster Classification System
-# These tweets are designed to work perfectly with the classification model
 # Format: Each tweet is on a new line
 # Categories: affected_individuals, infrastructure_and_utility_damage, not_humanitarian, other_relevant_information, rescue_volunteering_or_donation
 

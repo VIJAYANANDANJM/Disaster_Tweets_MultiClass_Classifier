@@ -20,7 +20,14 @@ from typing import Any, Dict, List, Optional
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, f1_score
+from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    classification_report,
+    confusion_matrix,
+    precision_recall_fscore_support,
+)
+from sklearn.preprocessing import label_binarize
 
 # Ensure project root is importable when script is run from reports/
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -184,6 +191,7 @@ def run_inference(df: pd.DataFrame) -> pd.DataFrame:
             confidence = None
             top_tokens = ""
             actionable_info = {}
+            scores = []
         else:
             pred_label_id = result.get("predicted_label_id")
             pred_label_name = LABEL_DISPLAY_NAMES.get(pred_label_id, result.get("predicted_label"))
@@ -193,6 +201,10 @@ def run_inference(df: pd.DataFrame) -> pd.DataFrame:
             actionable_info = result.get("actionable_info") or {}
 
         field_lengths = actionable_field_lengths(actionable_info)
+        score_cols = {
+            f"score_label_{label_id}": float(scores[label_id]) if label_id < len(scores) else None
+            for label_id in ALL_LABELS
+        }
 
         out_rows.append(
             {
@@ -200,8 +212,10 @@ def run_inference(df: pd.DataFrame) -> pd.DataFrame:
                 "predicted_label_id": pred_label_id,
                 "predicted_label_name": pred_label_name,
                 "max_confidence": confidence,
+                "confidence_scores_json": json.dumps(scores, ensure_ascii=False),
                 "top_tokens": top_tokens,
                 "actionable_info_json": json.dumps(actionable_info, ensure_ascii=False),
+                **score_cols,
                 **field_lengths,
             }
         )
@@ -234,8 +248,31 @@ def save_tables_and_figures(results_df: pd.DataFrame, out_dir: Path) -> Dict[str
         y_pred = labeled_df["predicted_label_id"]
 
         summary["accuracy_labeled"] = float(accuracy_score(y_true, y_pred))
-        summary["macro_f1_labeled"] = float(f1_score(y_true, y_pred, average="macro"))
-        summary["weighted_f1_labeled"] = float(f1_score(y_true, y_pred, average="weighted"))
+        p_macro, r_macro, f1_macro, _ = precision_recall_fscore_support(
+            y_true, y_pred, average="macro", zero_division=0
+        )
+        p_weighted, r_weighted, f1_weighted, _ = precision_recall_fscore_support(
+            y_true, y_pred, average="weighted", zero_division=0
+        )
+        summary["precision_macro_labeled"] = float(p_macro)
+        summary["recall_macro_labeled"] = float(r_macro)
+        summary["f1_macro_labeled"] = float(f1_macro)
+        summary["precision_weighted_labeled"] = float(p_weighted)
+        summary["recall_weighted_labeled"] = float(r_weighted)
+        summary["f1_weighted_labeled"] = float(f1_weighted)
+
+        score_cols = [f"score_label_{i}" for i in ALL_LABELS]
+        auprc_df = labeled_df.dropna(subset=score_cols)
+        if len(auprc_df) > 0:
+            y_true_bin = label_binarize(auprc_df["expected_label_id"].astype(int), classes=ALL_LABELS)
+            y_score = auprc_df[score_cols].to_numpy(dtype=float)
+            summary["auprc_macro_ovr"] = float(average_precision_score(y_true_bin, y_score, average="macro"))
+            summary["auprc_weighted_ovr"] = float(average_precision_score(y_true_bin, y_score, average="weighted"))
+            summary["auprc_micro"] = float(average_precision_score(y_true_bin, y_score, average="micro"))
+        else:
+            summary["auprc_macro_ovr"] = None
+            summary["auprc_weighted_ovr"] = None
+            summary["auprc_micro"] = None
 
         cls_report = classification_report(
             y_true,
@@ -253,8 +290,15 @@ def save_tables_and_figures(results_df: pd.DataFrame, out_dir: Path) -> Dict[str
         cm_df.to_csv(out_dir / "confusion_matrix_labeled.csv", encoding="utf-8")
     else:
         summary["accuracy_labeled"] = None
-        summary["macro_f1_labeled"] = None
-        summary["weighted_f1_labeled"] = None
+        summary["precision_macro_labeled"] = None
+        summary["recall_macro_labeled"] = None
+        summary["f1_macro_labeled"] = None
+        summary["precision_weighted_labeled"] = None
+        summary["recall_weighted_labeled"] = None
+        summary["f1_weighted_labeled"] = None
+        summary["auprc_macro_ovr"] = None
+        summary["auprc_weighted_ovr"] = None
+        summary["auprc_micro"] = None
 
     # ---------- Aggregated tables ----------
     predicted_counts = (
@@ -393,8 +437,15 @@ def write_markdown_summary(summary: Dict[str, Any], out_dir: Path, source_file: 
         f"- Total test tweets processed: **{summary.get('num_total_tweets', 0)}**",
         f"- Labeled subset size (from CATEGORY 0-4 sections): **{summary.get('num_labeled_tweets', 0)}**",
         f"- Accuracy (labeled subset): **{summary.get('accuracy_labeled')}**",
-        f"- Macro F1 (labeled subset): **{summary.get('macro_f1_labeled')}**",
-        f"- Weighted F1 (labeled subset): **{summary.get('weighted_f1_labeled')}**",
+        f"- Precision (macro): **{summary.get('precision_macro_labeled')}**",
+        f"- Recall (macro): **{summary.get('recall_macro_labeled')}**",
+        f"- F1-score (macro): **{summary.get('f1_macro_labeled')}**",
+        f"- Precision (weighted): **{summary.get('precision_weighted_labeled')}**",
+        f"- Recall (weighted): **{summary.get('recall_weighted_labeled')}**",
+        f"- F1-score (weighted): **{summary.get('f1_weighted_labeled')}**",
+        f"- AUPRC (macro OVR): **{summary.get('auprc_macro_ovr')}**",
+        f"- AUPRC (weighted OVR): **{summary.get('auprc_weighted_ovr')}**",
+        f"- AUPRC (micro): **{summary.get('auprc_micro')}**",
         "",
         "## Artifacts",
         "",

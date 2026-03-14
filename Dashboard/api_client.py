@@ -91,12 +91,6 @@ class APIClient:
     """Client for interacting with the backend API."""
     
     def __init__(self, base_url: str = "http://localhost:5000/api"):
-        """
-        Initialize API client.
-        
-        Args:
-            base_url: Base URL of the backend API
-        """
         self.base_url = base_url
         self.session = requests.Session()
     
@@ -119,10 +113,17 @@ class APIClient:
                 "text": tweet_data.get("text", ""),
                 "author": tweet_data.get("author", "manual_input"),
                 "authorName": tweet_data.get("authorName", tweet_data.get("author", "manual_input")),
+                "authorId": tweet_data.get("authorId", ""),
                 "tweetId": tweet_data.get("tweetId"),
                 "createdAt": tweet_data.get("createdAt"),
                 "retweetCount": tweet_data.get("retweetCount", 0),
                 "favoriteCount": tweet_data.get("favoriteCount", 0),
+                "source": tweet_data.get("source", "manual"),
+                # Geospatial fields
+                "placeTag": tweet_data.get("placeTag", ""),
+                "placeCountry": tweet_data.get("placeCountry", ""),
+                "userProfileLocation": tweet_data.get("userProfileLocation", ""),
+                "geoCoordinates": tweet_data.get("geoCoordinates"),
             }
             payload = _make_json_serializable(payload)
 
@@ -255,3 +256,46 @@ class APIClient:
         except requests.exceptions.RequestException as e:
             return False, f"Connection error: {str(e)}"
 
+    # ── Geospatial Aggregation Methods ────────────────────────────────
+
+    def get_geo_clusters(self, min_cluster_size: int = 5) -> tuple[bool, str, List[Dict]]:
+        """
+        Fetch pre-aggregated location clusters from the backend.
+
+        Returns:
+            tuple: (success, message, clusters_list)
+        """
+        try:
+            response = self.session.get(
+                f"{self.base_url}/tweets/geo-aggregate",
+                params={"minClusterSize": min_cluster_size},
+                timeout=30
+            )
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("success"):
+                    return True, f"Found {data.get('totalClusters', 0)} clusters", data.get("clusters", [])
+                return False, data.get("error", "Failed to fetch clusters"), []
+            error_data = response.json() if response.content else {}
+            return False, error_data.get("error", "Failed to fetch clusters"), []
+        except requests.exceptions.RequestException as e:
+            return False, f"Connection error: {str(e)}", []
+
+    def get_all_tweets_for_geo(self, max_pages: int = 20) -> tuple[bool, str, List[Dict]]:
+        """
+        Fetch all tweets (paginated) for client-side geospatial analysis.
+
+        Returns:
+            tuple: (success, message, all_tweets)
+        """
+        all_tweets = []
+        page = 1
+        while page <= max_pages:
+            success, msg, tweets, pagination = self.get_tweets(page=page, limit=100)
+            if not success:
+                return False, msg, all_tweets
+            all_tweets.extend(tweets)
+            if page >= pagination.get("pages", 1):
+                break
+            page += 1
+        return True, f"Fetched {len(all_tweets)} tweets", all_tweets

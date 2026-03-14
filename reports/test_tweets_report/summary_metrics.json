@@ -2,6 +2,13 @@
   "num_total_tweets": 300,
   "num_labeled_tweets": 300,
   "accuracy_labeled": 0.87,
-  "macro_f1_labeled": 0.8726220792389942,
-  "weighted_f1_labeled": 0.872622079238994
+  "precision_macro_labeled": 0.9191702910672467,
+  "recall_macro_labeled": 0.8699999999999999,
+  "f1_macro_labeled": 0.8726220792389942,
+  "precision_weighted_labeled": 0.9191702910672465,
+  "recall_weighted_labeled": 0.87,
+  "f1_weighted_labeled": 0.872622079238994,
+  "auprc_macro_ovr": 0.9731529730423869,
+  "auprc_weighted_ovr": 0.9731529730423868,
+  "auprc_micro": 0.905851286479041
 }

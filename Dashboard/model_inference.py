@@ -5,6 +5,7 @@ Handles loading the trained model and providing predictions, XAI explanations, a
 import torch
 import sys
 import os
+import re
 from transformers import AutoTokenizer
 from typing import Any, Dict, List
 
@@ -219,13 +220,21 @@ class ModelInference:
         Returns:
             dict: Complete classification results
         """
-        pred_id, confidences, label_name = self.predict(text)
+        # Preprocess the input text similarly to the training data cleaning
+        clean_text = str(text)
+        clean_text = re.sub(r'^RT\s+', '', clean_text)
+        clean_text = re.sub(r'@\w+', '', clean_text)
+        clean_text = re.sub(r'http\S+|www\S+', '', clean_text)
+        clean_text = clean_text.encode("ascii", "ignore").decode()
+        clean_text = re.sub(r'\s+', ' ', clean_text).strip()
+
+        pred_id, confidences, label_name = self.predict(clean_text)
         
         if pred_id is None:
             return None
         
-        explanation, probs = self.get_explanation(text, target_class=pred_id)
-        actionable_info = self.get_actionable_info(text, pred_id)
+        explanation, probs = self.get_explanation(clean_text, target_class=pred_id)
+        actionable_info = self.get_actionable_info(clean_text, pred_id)
         
         return {
             "predicted_label_id": pred_id,
@@ -235,3 +244,47 @@ class ModelInference:
             "actionable_info": actionable_info
         }
 
+    def classify_tweet_cluster(self, tweets, location_name="Unknown", progress_callback=None):
+        """
+        Classify all tweets in a location cluster and generate a consensus report.
+        
+        Args:
+            tweets: list of tweet dicts (must have 'text' key at minimum)
+            location_name: name of the location cluster
+            progress_callback: optional function(current, total) for UI progress updates
+            
+        Returns:
+            dict: cluster report from GeoSpatialAggregator with 5-class distribution,
+                  status, severity, combined actionable info, and recommendations
+        """
+        from Dashboard.geospatial_aggregator import GeoSpatialAggregator
+
+        total = len(tweets)
+        classified_tweets = []
+
+        for i, tweet in enumerate(tweets):
+            text = tweet.get("text", "")
+            if not text:
+                classified_tweets.append(tweet)
+                continue
+
+            result = self.classify_tweet(text)
+            if result:
+                # Attach classification to the tweet dict
+                tweet["classification"] = {
+                    "predictedLabelId": result["predicted_label_id"],
+                    "predictedLabel": result["predicted_label"],
+                    "confidenceScores": result["confidence_scores"],
+                }
+                if result.get("actionable_info"):
+                    tweet["actionableInfo"] = result["actionable_info"]
+
+            classified_tweets.append(tweet)
+
+            if progress_callback:
+                progress_callback(i + 1, total)
+
+        # Generate cluster report using the aggregator
+        aggregator = GeoSpatialAggregator()
+        report = aggregator.generate_cluster_report(location_name, classified_tweets)
+        return report

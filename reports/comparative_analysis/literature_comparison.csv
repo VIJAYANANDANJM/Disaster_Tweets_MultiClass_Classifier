@@ -1,0 +1,7 @@
+study,year,task,dataset,model,f1,accuracy,notes,source
+Burel et al. (2017),2017,Humanitarian tweet classification,CrisisLex26,Semantics + Deep Learning baseline,0.613,,Value reported in CrisisBench discussion as prior SOTA (humanitarian F1).,https://arxiv.org/abs/2004.06774
+Alam et al. (2019),2019,Humanitarian tweet classification,Crisis datasets (CrisisDPS context),Deep model benchmark (reported),0.78,,Value reported in CrisisBench discussion as prior SOTA (humanitarian F1).,https://arxiv.org/abs/2004.06774
+Alam et al. (2021),2021,Humanitarian tweet classification,HumAID-related benchmark in CrisisBench discussion,Best reported humanitarian model,0.781,,Best reported humanitarian F1 cited in CrisisBench discussion.,https://arxiv.org/abs/2004.06774
+He & Hu (2025),2025,Disaster tweet classification + geospatial visualization,HumAID (as stated in paper),Best text analysis model in framework,0.814,,F1 from paper abstract.,https://doi.org/10.3390/app15084330
+CrisisBench RoBERTa (Event-aware),2021,Humanitarian multi-class,CrisisBench consolidated English,RoBERTa (event-aware),0.87,0.87,From CrisisBench Table 9 (humanitarian).,https://arxiv.org/abs/2004.06774
+This Project (2026),2026,5-class humanitarian tweet classification,"Internal labeled set (test_tweets_mixed, n=300)",DeLTran15 + XtremeDistil + XAI pipeline,0.872622079,0.87,From generated project report.,local report: reports/test_tweets_report/summary_metrics.json

@@ -19,6 +19,26 @@ const tweetSchema = new mongoose.Schema({
     index: true
   },
 
+  // ── Geospatial Temporal Fields ──────────────────────────────────
+  // Resolved primary location (normalized, used for clustering)
+  location: { type: String, default: '', index: true },
+  // Which tier provided the location: 'place_tag', 'user_profile', 'text_extraction'
+  locationSource: {
+    type: String,
+    enum: ['place_tag', 'user_profile', 'text_extraction', ''],
+    default: ''
+  },
+  // Raw Twitter API fields
+  userProfileLocation: { type: String, default: '' },
+  placeTag: { type: String, default: '' },
+  placeCountry: { type: String, default: '' },
+  // Optional GPS coordinates
+  geoCoordinates: {
+    lat: { type: Number },
+    lng: { type: Number }
+  },
+  // ────────────────────────────────────────────────────────────────
+
   classification: {
     predictedLabelId: { type: Number },
     predictedLabel: { type: String },
@@ -42,5 +62,6 @@ const tweetSchema = new mongoose.Schema({
 });
 
 tweetSchema.index({ createdAt: -1 });
-tweetSchema.index({ status: 1 }); 
+tweetSchema.index({ status: 1 });
+tweetSchema.index({ location: 1 });
 module.exports = mongoose.model('Tweet', tweetSchema);

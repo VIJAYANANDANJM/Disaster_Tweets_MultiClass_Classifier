@@ -51,3 +51,15 @@ ACTIONABLE_LABELS = {0, 1, 4}
 MAX_TWEETS_PER_FETCH = 50
 TWEET_FETCH_INTERVAL = 60  # seconds
 
+# ── Geospatial Temporal Aggregation Settings ──────────────────────
+GEO_MIN_CLUSTER_SIZE = 5           # Min tweets for a cluster to be considered (use 50+ in production)
+GEO_AGREEMENT_THRESHOLD = 0.35     # Min % agreement for consensus (0.0 - 1.0)
+GEO_MIN_UNIQUE_AUTHORS = 3         # Min unique authors for a cluster to be reliable
+GEO_TEMPORAL_BURST_HOURS = 2       # If all tweets arrive within this window → "active event"
+
+GEO_SEVERITY_THRESHOLDS = {
+    "tweet_count_high": 40,        # High severity if 40+ tweets
+    "tweet_count_medium": 15,      # Medium severity if 15+ tweets
+    "people_high": 100,            # High if 100+ people affected
+    "people_medium": 20,           # Medium if 20+ people affected
+}
