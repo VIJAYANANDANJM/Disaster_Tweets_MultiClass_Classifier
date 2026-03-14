@@ -148,6 +148,36 @@ class TweetInputFrame(ctk.CTkFrame):
             width=300
         )
         self.author_entry.pack(side="left", padx=5, fill="x", expand=True)
+
+        # Location input (for Geo Analysis)
+        location_frame = ctk.CTkFrame(self, fg_color="transparent")
+        location_frame.pack(fill="x", padx=10, pady=5)
+
+        ctk.CTkLabel(
+            location_frame,
+            text="📍 Location:",
+            font=ctk.CTkFont(size=12)
+        ).pack(side="left", padx=5)
+
+        self.location_entry = ctk.CTkEntry(
+            location_frame,
+            placeholder_text="e.g. Houston, TX (for geo analysis)",
+            width=200
+        )
+        self.location_entry.pack(side="left", padx=5, fill="x", expand=True)
+
+        ctk.CTkLabel(
+            location_frame,
+            text="Profile Location:",
+            font=ctk.CTkFont(size=12)
+        ).pack(side="left", padx=5)
+
+        self.profile_location_entry = ctk.CTkEntry(
+            location_frame,
+            placeholder_text="Author's city (optional)",
+            width=200
+        )
+        self.profile_location_entry.pack(side="left", padx=5, fill="x", expand=True)
         
         # Submit button
         submit_btn = ctk.CTkButton(
@@ -192,6 +222,9 @@ class TweetInputFrame(ctk.CTkFrame):
             text_color="yellow"
         )
         
+        location = self.location_entry.get().strip()
+        profile_location = self.profile_location_entry.get().strip()
+
         # Create tweet object matching the new status schema
         tweet_data = {
             'text': text,
@@ -202,7 +235,9 @@ class TweetInputFrame(ctk.CTkFrame):
             'tweetId': str(uuid.uuid4()),
             'retweetCount': 0,
             'favoriteCount': 0,
-            'status': 'unverified'  # Default state before threshold check
+            'status': 'unverified',  # Default state before threshold check
+            'placeTag': location,
+            'userProfileLocation': profile_location or location,
         }
         
         # Call callback
@@ -211,6 +246,8 @@ class TweetInputFrame(ctk.CTkFrame):
         # Clear input
         self.tweet_text.delete("1.0", "end")
         self.author_entry.delete(0, "end")
+        self.location_entry.delete(0, "end")
+        self.profile_location_entry.delete(0, "end")
         self.status_label.configure(
             text="Tweet submitted successfully!",
             text_color="green"
@@ -677,6 +714,7 @@ class GeoAnalysisView(ctk.CTkFrame):
         self.api_client = api_client
         self.back_callback = back_callback
         self.reports = []
+        self._cached_tweets = None  # In-memory tweet cache
         self.configure(fg_color="transparent")
         self._build_ui()
 
@@ -689,12 +727,13 @@ class GeoAnalysisView(ctk.CTkFrame):
         ctk.CTkButton(top, text="← Back to Dashboard", width=160,
                       fg_color="#34495E", hover_color="#2C3E50",
                       command=self.back_callback).pack(side="right", padx=10)
-        self.refresh_geo_btn = ctk.CTkButton(top, text="🔄 Refresh Clusters", width=160,
-                                             fg_color="#2980B9", hover_color="#3498DB",
-                                             command=self.load_clusters)
+        self.refresh_geo_btn = ctk.CTkButton(
+            top, text="🔄 Refresh", width=120,
+            fg_color="#2980B9", hover_color="#3498DB",
+            command=lambda: self.load_clusters(force_refresh=True)
+        )
         self.refresh_geo_btn.pack(side="right", padx=5)
-        self.status_label = ctk.CTkLabel(top, text="Click 'Refresh Clusters' to load",
-                                         font=ctk.CTkFont(size=12), text_color="gray")
+        self.status_label = ctk.CTkLabel(top, text="", font=ctk.CTkFont(size=12))
         self.status_label.pack(side="right", padx=15)
 
         # Main split: left cluster list | right detail
@@ -723,9 +762,36 @@ class GeoAnalysisView(ctk.CTkFrame):
         ctk.CTkLabel(self.detail_scroll, text="Select a location cluster to view details",
                      font=ctk.CTkFont(size=14), text_color="gray").pack(expand=True, pady=100)
 
-    def load_clusters(self):
-        """Fetch ALL tweets, classify any unclassified ones, then aggregate."""
-        self.status_label.configure(text="Loading tweets...", text_color="#3498DB")
+    def load_clusters(self, force_refresh=False):
+        """Fetch ALL tweets, classify any unclassified ones, then aggregate.
+        Uses in-memory cache to avoid re-classifying on every open.
+        Click 'Refresh' to force a full reload from the database."""
+
+        # If we have cached tweets and this is NOT a forced refresh, just re-aggregate
+        if self._cached_tweets and not force_refresh:
+            self.status_label.configure(text="Using cached data. Aggregating...", text_color="#27AE60")
+            self.refresh_geo_btn.configure(state="disabled")
+            self._geo_done = False
+            self._geo_error = None
+            self._geo_reports = None
+            self._geo_status_text = "Aggregating cached tweets..."
+
+            def cache_worker():
+                try:
+                    from Dashboard.geospatial_aggregator import GeoSpatialAggregator
+                    aggregator = GeoSpatialAggregator(min_cluster_size=1)
+                    self._geo_reports = aggregator.analyze_all_clusters(self._cached_tweets)
+                except Exception as e:
+                    self._geo_error = str(e)
+                finally:
+                    self._geo_done = True
+
+            threading.Thread(target=cache_worker, daemon=True).start()
+            self._poll_geo()
+            return
+
+        # Full load from DB
+        self.status_label.configure(text="Loading tweets from database...", text_color="#3498DB")
         self.refresh_geo_btn.configure(state="disabled")
 
         # Shared state between worker thread and main-thread poll
@@ -767,8 +833,25 @@ class GeoAnalysisView(ctk.CTkFrame):
                             }
                             if result.get("actionable_info"):
                                 tweet["actionableInfo"] = result["actionable_info"]
+                            # Sync classification back to the backend
+                            tweet_id = tweet.get("_id", "")
+                            if tweet_id:
+                                try:
+                                    confidence = max(result["confidence_scores"])
+                                    status = "verified" if confidence >= 0.7 else "unverified"
+                                    self.api_client.classify_tweet(tweet_id, {
+                                        "classification": tweet["classification"],
+                                        "actionableInfo": tweet.get("actionableInfo", {}),
+                                        "explanation": result.get("explanation", []),
+                                        "status": status,
+                                    })
+                                except Exception:
+                                    pass  # Best-effort sync
                         if (i + 1) % 10 == 0 or i == len(unclassified) - 1:
                             self._geo_status_text = f"Classifying {i+1}/{len(unclassified)} tweets..."
+
+                # Cache the fully-classified tweets in memory
+                self._cached_tweets = tweets
 
                 self._geo_status_text = "Aggregating clusters..."
                 aggregator = GeoSpatialAggregator(min_cluster_size=1)
@@ -1086,13 +1169,16 @@ class MainDashboard(ctk.CTk):
                 back_callback=self.show_main_dashboard
             )
         self.geo_view.pack(fill="both", expand=True)
-        self.geo_view.load_clusters()
+        # Uses cache if available (instant), first load fetches from DB
+        self.geo_view.load_clusters(force_refresh=False)
 
     def show_main_dashboard(self):
-        """Return from Geo Analysis to main dashboard."""
+        """Return from Geo Analysis to main dashboard and refresh tweets."""
         if hasattr(self, "geo_view"):
             self.geo_view.pack_forget()
         self.dashboard_frame.pack(fill="both", expand=True)
+        # Refresh the tweet list to show newly classified tweets from Geo Analysis
+        self.load_tweets_from_db()
 
     def filter_hitl(self):
         self.hitl_mode = True
@@ -1113,11 +1199,32 @@ class MainDashboard(ctk.CTk):
         self.display_tweets()
     
     def handle_manual_tweet(self, tweet_data):
+        self._manual_tweet_done = False
+        self._manual_tweet_data = None
+
         def process_thread():
             self.classify_single_tweet(tweet_data)
             self.save_tweet_to_db(tweet_data)
-            self.load_tweets_from_db()
+            self._manual_tweet_data = tweet_data
+            self._manual_tweet_done = True
+
         threading.Thread(target=process_thread, daemon=True).start()
+        self._poll_manual_tweet()
+
+    def _poll_manual_tweet(self):
+        """Poll for manual tweet classification completion."""
+        if not self._manual_tweet_done:
+            self.after(200, self._poll_manual_tweet)
+            return
+        # Insert at top so it's visible immediately
+        tweet_data = self._manual_tweet_data
+        if tweet_data:
+            if not hasattr(self, 'tweets') or self.tweets is None:
+                self.tweets = []
+            self.tweets.insert(0, tweet_data)
+            self.display_tweets()
+            # Auto-select the new tweet to show its detail
+            self.select_tweet(tweet_data)
     
     def classify_single_tweet(self, tweet_data):
         if not self.model_inference: self.model_inference = ModelInference()
