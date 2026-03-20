@@ -5,6 +5,160 @@ Copy the code into [PlantUML Online Editor](https://www.plantuml.com/plantuml/um
 
 ---
 
+## ★ ML Pipeline + Geospatial Feature — Architecture Diagram
+
+> **This is the core architecture diagram** — focuses only on how the model works and the Geospatial Temporal feature. No backend/frontend details.
+
+```plantuml
+@startuml ML_Pipeline_Architecture
+skinparam backgroundColor white
+skinparam defaultFontSize 12
+skinparam defaultFontName Arial
+skinparam rectangleRoundCorner 10
+skinparam arrowThickness 2
+skinparam arrowColor #333333
+skinparam shadowing false
+
+skinparam rectangle {
+    BorderColor #333333
+    BackgroundColor #FFFFFF
+}
+
+title <b>Disaster Tweet Multi-Class Classification System</b>\n<i>ML Pipeline + Geospatial Temporal Aggregation Architecture</i>
+
+' =============================================
+' ROW 1: INPUT SOURCES
+' =============================================
+
+rectangle "**INPUT**\n(Tweets, NGO messages,\nOnline Complaints etc.)" as INPUT #FFE0B2
+
+database "**CrisisMMD\nDATASET**\n(7 Disaster Events)" as DATASET_RAW #B3E5FC
+
+' =============================================
+' ROW 2: PREPROCESSING
+' =============================================
+
+rectangle "**PREPROCESSING**\nURL Removal\nSpecial Char Cleanup\nContraction Expansion\nEmoji Handling\nWhitespace Normalize" as PREPROCESS #FFFFFF
+
+database "**DATASET**\n(Contains Messages\nand Output Label)" as DATASET_CLEAN #E1F5FE
+
+' =============================================
+' ROW 3: MODEL PIPELINE
+' =============================================
+
+rectangle "**TOKENIZATION**\n(Converting text\nto tokens using\nall-MiniLM-L6-v2)" as TOKENIZER #FFFFFF
+
+rectangle "**PRE-TRAINED\nDeLTran15\nTRANSFORMER**\n(Fine-tuned from\nall-MiniLM-L6-v2)\n384-dim → 5 classes" as TRANSFORMER #E8EAF6
+
+rectangle "**CALCULATION OF\nCONFIDENCE SCORE**\n(Softmax → 5 probabilities\nMax prob = confidence)" as CONFIDENCE #FFFFFF
+
+rectangle "**HUMAN IN THE LOOP\nVERIFICATION**\n(If confidence < 70%\n→ Flag for human review\n→ Correct label)" as HITL #FFF3E0
+
+' =============================================
+' ROW 4: XAI + ACTIONABLE + PREDICTED CLASS
+' =============================================
+
+rectangle "**EXPLAINABLE AI (XAI)**\n(Token Importance Scoring)\nGradient backward pass\nL2 norm per token\n→ White-to-Red heatmap" as XAI #F3E5F5
+
+rectangle "**Token\nScores**" as TOKEN_SCORES #E1BEE7
+
+rectangle "**ACTIONABLE INFORMATION\nEXTRACTION USING\nNER MODULE**\n(spaCy en_core_web_sm)\n📍 Locations (GPE/LOC)\n👥 People Count (regex)\n🆘 Needs (keywords)\n💥 Damage Type (keywords)\n⏰ Time Mentions (regex)" as ACTIONABLE #E8F5E9
+
+rectangle "**Actionable\nInformation**" as ACTION_OUTPUT #C8E6C9
+
+rectangle "**Predicted\nClass**\n(0-4)" as PREDICTED_CLASS #BBDEFB
+
+' =============================================
+' ROW 5: GEOSPATIAL TEMPORAL AGGREGATION (NEW)
+' =============================================
+
+rectangle "**GEOSPATIAL TEMPORAL AGGREGATION**" as GEO_TITLE #E3F2FD
+
+rectangle "**LOCATION\nRESOLUTION**\n3-Tier Priority:\n1. Place Tag (GPS)\n2. User Profile\n3. Text Extraction\n\nNormalize:\n\"Downtown Houston\"\n→ \"houston\"" as LOC_RESOLVE #E3F2FD
+
+rectangle "**CLUSTER\nTWEETS**\nGroup by\nnormalized\nlocation\n→ N clusters" as CLUSTER #E3F2FD
+
+rectangle "**COMPUTE\nCONSENSUS**\nWeighted 5-class\ndistribution\nper cluster\n(% per label)" as CONSENSUS #E3F2FD
+
+rectangle "**TEMPORAL\nANALYSIS**\n≤6h → BURST ⚡\n>72h → SPREAD 📅\nelse → NORMAL" as TEMPORAL #E3F2FD
+
+rectangle "**10-CASE\nDECISION\nMATRIX**\n1. Insufficient Data\n2. Suspicious Source\n3. Early Signal\n4. Confirmed Event\n5. Ambiguous\n6. No Disaster\n7. Low Confidence\n8. Active Event 🚨\n9. Recovery Phase\n10. Location Uncertain" as DECISION #FFE0E0
+
+rectangle "**SEVERITY\nSCORING**\nPoint-based:\nTweet count\nPeople affected\nDamage reports\n→ LOW/MED/HIGH\n   /CRITICAL" as SEVERITY #FFE0E0
+
+rectangle "**SITUATION\nREPORT**\n📍 Location\n📊 5-Class Distribution\n⚠️ Severity + Urgency\n📝 Reason\n🆘 Merged Intelligence\n🎯 Recommended Actions" as REPORT #FFF9C4
+
+' =============================================
+' CONNECTIONS — Main Pipeline (Left to Right)
+' =============================================
+
+INPUT -down-> PREPROCESS : "Raw\nTweets"
+DATASET_RAW -right-> PREPROCESS : "Raw\nTweets"
+PREPROCESS -right-> DATASET_CLEAN : "Processed\nTweet"
+DATASET_CLEAN -right-> TOKENIZER : "Processed\ntweet"
+TOKENIZER -right-> TRANSFORMER : "Tokens"
+TRANSFORMER -right-> CONFIDENCE : "Unnormalized\nScores"
+CONFIDENCE -right-> HITL : "Confidence\nScore"
+
+' Periodic training feedback
+HITL -up-> TRANSFORMER : "Periodic Training\nand Updation"
+
+' =============================================
+' CONNECTIONS — XAI Branch (Down from Tokenizer+Model)
+' =============================================
+
+TOKENIZER -down-> XAI : "Tokens"
+TRANSFORMER -down-> XAI : "Model"
+XAI -right-> TOKEN_SCORES
+
+' =============================================
+' CONNECTIONS — Actionable Info Branch
+' =============================================
+
+DATASET_CLEAN -down-> PREDICTED_CLASS : "Processed\ntweet"
+PREDICTED_CLASS -right-> ACTIONABLE
+ACTIONABLE -right-> ACTION_OUTPUT
+
+' =============================================
+' CONNECTIONS — Geospatial Branch (NEW)
+' =============================================
+
+ACTION_OUTPUT -down-> GEO_TITLE : "Actionable Info\nper tweet"
+PREDICTED_CLASS -down-> GEO_TITLE : "Classification\nper tweet"
+CONFIDENCE -down-> GEO_TITLE : "Confidence\nScores"
+
+GEO_TITLE -down-> LOC_RESOLVE : "All classified\ntweets"
+LOC_RESOLVE -right-> CLUSTER : "Resolved\nlocations"
+CLUSTER -right-> CONSENSUS : "Tweet\nclusters"
+CONSENSUS -right-> TEMPORAL : "5-class\ndistribution"
+TEMPORAL -down-> DECISION : "Temporal\npattern"
+CONSENSUS -down-> DECISION : "Consensus\ndata"
+DECISION -right-> SEVERITY : "Matched\ncase"
+SEVERITY -right-> REPORT : "Final\nscores"
+ACTION_OUTPUT -down-> REPORT : "Merged\nintelligence"
+
+' =============================================
+' LEGEND
+' =============================================
+
+legend bottom left
+  |= Color |= Component |
+  | <#FFE0B2> | Input Sources |
+  | <#B3E5FC> | Data Storage |
+  | <#E8EAF6> | Neural Network Model |
+  | <#F3E5F5> | Explainable AI |
+  | <#E8F5E9> | NLP Extraction |
+  | <#FFF3E0> | Human-in-the-Loop |
+  | <#E3F2FD> | Geospatial Pipeline (NEW) |
+  | <#FFE0E0> | Decision + Severity |
+  | <#FFF9C4> | Final Output |
+end legend
+
+@enduml
+```
+
+---
+
 ## 0. Quick Overview — Simple Block Diagram
 
 This diagram gives a **quick, at-a-glance** understanding of the entire project flow.

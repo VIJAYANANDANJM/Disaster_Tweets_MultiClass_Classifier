@@ -7,7 +7,7 @@ Includes HITL (Human-In-The-Loop) Database Synchronization and Refresh logic.
 import customtkinter as ctk
 from tkinter import ttk
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Optional, Any
 import uuid
 
@@ -709,12 +709,28 @@ class GeoAnalysisView(ctk.CTkFrame):
     }
     LABEL_EMOJIS = {0: "🔴", 1: "🟠", 2: "⚪", 3: "🔵", 4: "🟢"}
 
+    # Time filter presets: (display_label, hours_value)
+    # hours_value=0 means "All Time" (no filter)
+    TIME_FILTER_OPTIONS = [
+        ("All Time", 0),
+        ("Last 15 min", 0.25),
+        ("Last 30 min", 0.5),
+        ("Last 1 hour", 1),
+        ("Last 3 hours", 3),
+        ("Last 6 hours", 6),
+        ("Last 12 hours", 12),
+        ("Last 24 hours", 24),
+        ("Last 3 days", 72),
+        ("Last 7 days", 168),
+    ]
+
     def __init__(self, parent, api_client, back_callback):
         super().__init__(parent)
         self.api_client = api_client
         self.back_callback = back_callback
         self.reports = []
         self._cached_tweets = None  # In-memory tweet cache
+        self._time_filter_hours = 0  # 0 = All Time (no filter)
         self.configure(fg_color="transparent")
         self._build_ui()
 
@@ -733,6 +749,23 @@ class GeoAnalysisView(ctk.CTkFrame):
             command=lambda: self.load_clusters(force_refresh=True)
         )
         self.refresh_geo_btn.pack(side="right", padx=5)
+
+        # Time filter dropdown
+        filter_labels = [opt[0] for opt in self.TIME_FILTER_OPTIONS]
+        self._time_filter_var = ctk.StringVar(value=filter_labels[0])
+        self.time_filter_menu = ctk.CTkOptionMenu(
+            top, variable=self._time_filter_var,
+            values=filter_labels,
+            width=160, height=32,
+            fg_color="#1A5276", button_color="#2980B9",
+            button_hover_color="#3498DB",
+            font=ctk.CTkFont(size=12),
+            command=self._on_time_filter_changed
+        )
+        self.time_filter_menu.pack(side="right", padx=5)
+        ctk.CTkLabel(top, text="⏱ Filter:",
+                     font=ctk.CTkFont(size=12, weight="bold")).pack(side="right", padx=(10, 2))
+
         self.status_label = ctk.CTkLabel(top, text="", font=ctk.CTkFont(size=12))
         self.status_label.pack(side="right", padx=15)
 
@@ -762,6 +795,88 @@ class GeoAnalysisView(ctk.CTkFrame):
         ctk.CTkLabel(self.detail_scroll, text="Select a location cluster to view details",
                      font=ctk.CTkFont(size=14), text_color="gray").pack(expand=True, pady=100)
 
+    # ── Time Filter Methods ─────────────────────────────────────────────
+
+    def _get_active_filter_label(self):
+        """Return the display label for the currently active time filter."""
+        for label, hours in self.TIME_FILTER_OPTIONS:
+            if hours == self._time_filter_hours:
+                return label
+        return "All Time"
+
+    def _filter_tweets_by_time(self, tweets, hours):
+        """Filter tweets to only include those within the last `hours` hours.
+        If hours is 0 or None, returns all tweets (no filtering)."""
+        if not hours or not tweets:
+            return tweets
+
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(hours=hours)
+        filtered = []
+
+        for t in tweets:
+            created = t.get("createdAt", "")
+            if not created:
+                continue
+            try:
+                if isinstance(created, str):
+                    ts = created.replace("Z", "+00:00")
+                    dt = datetime.fromisoformat(ts)
+                elif isinstance(created, datetime):
+                    dt = created
+                else:
+                    continue
+
+                # Make offset-aware if naive
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+
+                if dt >= cutoff:
+                    filtered.append(t)
+            except (ValueError, TypeError):
+                continue
+
+        return filtered
+
+    def _on_time_filter_changed(self, selected_label):
+        """Called when the user picks a new time filter from the dropdown."""
+        for label, hours in self.TIME_FILTER_OPTIONS:
+            if label == selected_label:
+                self._time_filter_hours = hours
+                break
+        self._apply_time_filter()
+
+    def _apply_time_filter(self):
+        """Re-aggregate cached tweets with the current time filter."""
+        if not self._cached_tweets:
+            return
+
+        filter_label = self._get_active_filter_label()
+        self.status_label.configure(
+            text=f"Filtering: {filter_label}...", text_color="#F39C12")
+        self.refresh_geo_btn.configure(state="disabled")
+        self._geo_done = False
+        self._geo_error = None
+        self._geo_reports = None
+        self._geo_status_text = f"Aggregating ({filter_label})..."
+
+        def filter_worker():
+            try:
+                from Dashboard.geospatial_aggregator import GeoSpatialAggregator
+                tweets = self._filter_tweets_by_time(
+                    self._cached_tweets, self._time_filter_hours)
+                aggregator = GeoSpatialAggregator(min_cluster_size=1)
+                self._geo_reports = aggregator.analyze_all_clusters(tweets)
+                self._geo_status_text = (
+                    f"{len(tweets)} tweets after filter")
+            except Exception as e:
+                self._geo_error = str(e)
+            finally:
+                self._geo_done = True
+
+        threading.Thread(target=filter_worker, daemon=True).start()
+        self._poll_geo()
+
     def load_clusters(self, force_refresh=False):
         """Fetch ALL tweets, classify any unclassified ones, then aggregate.
         Uses in-memory cache to avoid re-classifying on every open.
@@ -779,8 +894,10 @@ class GeoAnalysisView(ctk.CTkFrame):
             def cache_worker():
                 try:
                     from Dashboard.geospatial_aggregator import GeoSpatialAggregator
+                    tweets = self._filter_tweets_by_time(
+                        self._cached_tweets, self._time_filter_hours)
                     aggregator = GeoSpatialAggregator(min_cluster_size=1)
-                    self._geo_reports = aggregator.analyze_all_clusters(self._cached_tweets)
+                    self._geo_reports = aggregator.analyze_all_clusters(tweets)
                 except Exception as e:
                     self._geo_error = str(e)
                 finally:
@@ -854,8 +971,10 @@ class GeoAnalysisView(ctk.CTkFrame):
                 self._cached_tweets = tweets
 
                 self._geo_status_text = "Aggregating clusters..."
+                tweets_to_aggregate = self._filter_tweets_by_time(
+                    tweets, self._time_filter_hours)
                 aggregator = GeoSpatialAggregator(min_cluster_size=1)
-                reports = aggregator.analyze_all_clusters(tweets)
+                reports = aggregator.analyze_all_clusters(tweets_to_aggregate)
                 self._geo_reports = reports
             except Exception as e:
                 self._geo_error = str(e)
@@ -892,7 +1011,9 @@ class GeoAnalysisView(ctk.CTkFrame):
                          font=ctk.CTkFont(size=13), text_color="gray").pack(pady=20)
             self.status_label.configure(text="No clusters", text_color="gray")
             return
-        self.status_label.configure(text=f"{len(reports)} clusters loaded", text_color="#2ECC71")
+        filter_label = self._get_active_filter_label()
+        filter_suffix = f"  ({filter_label})" if self._time_filter_hours else ""
+        self.status_label.configure(text=f"{len(reports)} clusters loaded{filter_suffix}", text_color="#2ECC71")
         for report in reports:
             self._make_cluster_card(report)
         if reports:

@@ -608,7 +608,7 @@ Case 7: Low Confidence          (avg confidence < 50%)
 Case 5: Ambiguous               (low agreement, humanitarian)
 Case 8: Active Event            (temporal burst + humanitarian)
 Case 9: Recovery Phase          (spread + recovery > rescue)
-Case 4: Confirmed Event         (enough tweets + authors)
+Case 4: Confirmed Event         (enough tweets + authors)   
 ─── Fallback ───                (none matched)
 ```
 
