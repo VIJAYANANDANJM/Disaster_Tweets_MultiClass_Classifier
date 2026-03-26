@@ -99,6 +99,7 @@ class ModelInference:
         self.model = None
         self.tokenizer = None
         self.loaded = False
+        self.device = torch.device("cpu")
         self._load_model()
     
     def _load_model(self):
@@ -111,13 +112,14 @@ class ModelInference:
             tokenizer_path = os.path.join(project_root, TOKENIZER_PATH)
             
             # Load tokenizer
-            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, local_files_only=True)
             
             # Load model
-            self.model = DeLTran15(MODEL_NAME)
+            self.model = DeLTran15(MODEL_NAME, local_files_only=True)
             self.model.load_state_dict(
                 torch.load(model_path, map_location="cpu")
             )
+            self.model.to(self.device)
             self.model.eval()
             self.loaded = True
             print("Model loaded successfully!")
@@ -146,6 +148,7 @@ class ModelInference:
                 max_length=128,
                 return_tensors="pt"
             )
+            enc = {key: value.to(self.device) for key, value in enc.items()}
             
             with torch.no_grad():
                 logits = self.model(
@@ -153,9 +156,11 @@ class ModelInference:
                     enc["attention_mask"]
                 )
                 probs = torch.softmax(logits, dim=1)
-                pred = torch.argmax(probs, dim=1).item()
+                if probs.device.type == "meta":
+                    raise RuntimeError("Model output is on the meta device; weights were not materialized correctly.")
+                pred = int(torch.argmax(probs, dim=1).detach().cpu().item())
             
-            confidence_scores = probs.squeeze().tolist()
+            confidence_scores = probs.squeeze(0).detach().cpu().tolist()
             label_name = LABEL_MAP.get(pred, "unknown")
             
             return pred, confidence_scores, label_name

@@ -1,0 +1,300 @@
+%Version 3.1 December 2024
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[pdflatex,sn-mathphys-num]{sn-jnl}
+
+\usepackage{graphicx}%
+\usepackage{multirow}%
+\usepackage{amsmath,amssymb,amsfonts}%
+\usepackage{amsthm}%
+\usepackage{mathrsfs}%
+\usepackage[title]{appendix}%
+\usepackage{xcolor}%
+\usepackage{textcomp}%
+\usepackage{manyfoot}%
+\usepackage{booktabs}%
+\usepackage{algorithm}%
+\usepackage{algorithmicx}%
+\usepackage{algpseudocode}%
+\usepackage{listings}%
+
+\theoremstyle{thmstyleone}%
+\newtheorem{theorem}{Theorem}%
+\newtheorem{proposition}[theorem]{Proposition}%
+
+\theoremstyle{thmstyletwo}%
+\newtheorem{example}{Example}%
+\newtheorem{remark}{Remark}%
+
+\theoremstyle{thmstylethree}%
+\newtheorem{definition}{Definition}%
+
+\raggedbottom
+
+\begin{document}
+
+\title[Article Title]{An Explainable Multi-Class Disaster Tweet Classification System with Geospatial Temporal Aggregation and Human-in-the-Loop Verification}
+
+\author*[1]{\fnm{Vikram Dharsan} \sur{K S}}
+\email{2023103050@student.annauniv.edu}
+
+\author*[1]{\fnm{Abhijith} \sur{M}}
+\email{2023103095@student.annauniv.edu}
+
+\author*[1]{\fnm{Vijay Anandan} \sur{J M}}
+\email{2023103541@student.annauniv.edu}
+
+\author*[1]{\fnm{Jeeva} \sur{S}}
+\email{2023103604@student.annauniv.edu}
+
+\affil*[1]{\orgdiv{Department of Computer Science Engineering},
+\orgname{College of Engineering, Guindy},
+\orgaddress{
+\city{Chennai},
+\country{India}
+}}
+
+\abstract{Social media platforms such as Twitter have become critical real-time information sources during natural disasters; however, the large volume of tweets makes manual analysis infeasible. This paper presents an end-to-end disaster tweet classification system that addresses multi-class categorization, model interpretability, and location-aware situational analysis. The system classifies tweets into five humanitarian categories using a fine-tuned Sentence-BERT (all-MiniLM-L6-v2) model with a lightweight classification head. It integrates gradient-based Explainable AI (XAI) for token-level interpretation, a spaCy-based Named Entity Recognition (NER) module for extracting actionable information, a Human-in-the-Loop (HITL) mechanism for low-confidence predictions, and a Geospatial Temporal Aggregation module that clusters tweets by location, computes consensus distributions, and generates situation reports with severity scoring. Experimental results achieve an accuracy of 87.0\% and a macro F1-score of 87.26\% on multi-event disaster data. The system operates entirely on local hardware, ensuring offline capability.}
+
+\keywords{Disaster Tweet Classification, Multi-Class Classification, Explainable AI, Geospatial Aggregation, Transformer Models, Human-in-the-Loop, Named Entity Recognition, Crisis Informatics, Natural Language Processing}
+
+\maketitle
+
+\section{Introduction}
+
+Natural disasters generate an unprecedented volume of social media activity. During Hurricane Harvey (2017), over 325,000 disaster-related tweets were posted within the first 48 hours \cite{ref1}. These tweets contain critical, time-sensitive information including reports of trapped individuals, infrastructure damage, and resource needs \cite{ref2}. However, the sheer volume renders manual analysis infeasible, and binary classification systems fail to capture the semantic diversity of crisis-related information \cite{ref3}.
+
+Existing systems suffer from three primary limitations: (i)~\textit{insufficient granularity}---binary classification cannot differentiate between casualty reports, infrastructure damage, and rescue efforts; (ii)~\textit{lack of interpretability}---deep learning models provide predictions without explanations; and (iii)~\textit{absence of spatial aggregation}---tweet-level predictions are not aggregated into location-level insights.
+
+This paper makes the following contributions: (1)~an end-to-end classification system built upon the DeLTran15 \cite{ref16} transformer model achieving 87.0\% accuracy and 87.26\% macro F1-score across five humanitarian categories; (2)~gradient-based XAI for interpretable predictions; (3)~a hybrid NLP pipeline for actionable information extraction; (4)~a confidence-based HITL verification workflow; and (5)~a geospatial temporal aggregation module with severity scoring and action recommendations.
+
+\section{Related Work}
+
+Early disaster tweet classification approaches employed traditional ML methods such as SVM with TF-IDF features \cite{ref4}, achieving F1-scores between 65--75\%. Alam et al. \cite{ref5} introduced the CrisisMMD dataset with humanitarian category annotations. Transformer-based models significantly improved performance, with BERT \cite{ref6} and RoBERTa \cite{ref7} achieving state-of-the-art results.
+
+For model interpretability, LIME \cite{ref8} and SHAP \cite{ref9} provide post-hoc explanations, while gradient-based methods \cite{ref10} and attention analysis \cite{ref11} offer token-level importance scores directly from model representations. In geospatial crisis analysis, De Albuquerque et al. \cite{ref12} demonstrated the correlation between tweet density and flood impact, while Middleton et al. \cite{ref13} developed real-time geoparsing systems. However, existing approaches focus primarily on binary disaster detection per location and do not provide multi-class consensus-based situational awareness. Human-in-the-Loop systems \cite{ref14, ref15} have been shown to improve reliability in critical applications through confidence-based verification.
+
+\section{Dataset and Preprocessing}
+
+We utilize the CrisisMMD dataset \cite{ref5}, comprising tweets from seven major disaster events (Hurricane Harvey, Irma, Maria; California Wildfires; Mexico Earthquake; Iraq-Iran Earthquake; Sri Lanka Floods), totaling approximately 21,300 tweets. Each tweet is annotated with one of five humanitarian categories: Affected Individuals, Infrastructure \& Utility Damage, Not Humanitarian, Other Relevant Information, and Rescue/Volunteering/Donation.
+
+The preprocessing pipeline applies URL removal, @mention removal, hashtag symbol stripping (preserving text content), contraction expansion, emoji-to-text translation, whitespace normalization, and case normalization. This reduces vocabulary noise while preserving semantic information.
+
+\section{System Architecture}
+
+\subsection{Overview}
+
+The system follows a modular, privacy-first architecture where all AI inference runs locally. It is built upon the DeLTran15 classification model \cite{ref16} and extends it with the Explainable AI engine, Actionable Information Extraction, Human-in-the-Loop verification, and Geospatial Temporal Aggregation. The overall architecture is illustrated in Fig.~\ref{fig:architecture}.
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\textwidth]{CIP2.jpeg}
+    \caption{System architecture illustrating preprocessing, DeLTran15-based classification, explainable AI, actionable information extraction, and geospatial temporal aggregation.}
+    \label{fig:architecture}
+\end{figure*}
+
+\subsection{DeLTran15 Classification Model}
+
+The classification backbone adopts the DeLTran15 model \cite{ref16}, built upon the \texttt{all-MiniLM-L6-v2} pre-trained transformer with a 6-layer encoder producing 384-dimensional hidden representations. A dropout layer ($p = 0.3$) is applied to the [CLS] embedding, followed by a linear classification head mapping to 5 output logits. Formally, for an input tweet $t$:
+
+\begin{equation}
+y = \text{Softmax}(W \cdot \text{Dropout}(\text{Encoder}(\text{Tokenize}(t))_{[CLS]}, p\!=\!0.3) + b)
+\end{equation}
+
+where $W \in \mathbb{R}^{5 \times 384}$ and $b \in \mathbb{R}^{5}$ are learnable parameters.
+
+\subsection{Explainable AI Module}
+
+Gradient-based token importance analysis computes the importance of each token $i$ as $\text{importance}(i) = \|h_i\|_2$, where $h_i \in \mathbb{R}^{384}$ is the hidden state vector. Scores are normalized to $[0,1]$ and visualized using a color gradient.
+
+\subsection{Actionable Information Extraction}
+
+For disaster-related tweets, a hybrid NLP pipeline extracts: (i)~locations using spaCy NER (GPE, LOC, FAC entities) with regex fallback; (ii)~casualty counts via regex patterns; (iii)~resource needs through keyword matching; (iv)~damage types via infrastructure keywords; and (v)~temporal references using time-indicator patterns.
+
+\subsection{Human-in-the-Loop Verification}
+
+Predictions with $\max(\text{Softmax}) \geq 0.70$ are automatically accepted; those below are flagged for human review with the tweet text, predicted label, confidence score, and XAI-based token highlighting. Corrections are stored for future model improvement.
+
+\subsection{Geospatial Temporal Aggregation}
+
+This module clusters tweets by geographic location and generates per-location situation reports. The pipeline is illustrated in Fig.~\ref{fig:geo_pipeline}.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{GSA.png}
+\caption{Geospatial temporal aggregation pipeline showing classification, location resolution, clustering, temporal analysis, decision matrix, severity scoring, and report generation.}
+\label{fig:geo_pipeline}
+\end{figure*}
+
+\textbf{Location Resolution} uses a three-tier priority system: GPS-based place tags, user profile locations, and spaCy NER text extraction, with normalization for consistent clustering.
+
+\textbf{Aggregation Pipeline:} For each location cluster, the module performs: (1)~cluster formation by normalized location; (2)~consensus computation using confidence-weighted voting:
+
+\begin{equation}
+\text{consensus}(k) = \frac{\sum_i (\text{confidence}_i \cdot \mathbb{1}[y_i = k])}{\sum_i \text{confidence}_i}
+\end{equation}
+
+(3)~temporal analysis classifying activity as burst ($\leq$6h), spread ($>$72h), or normal; (4)~decision classification via a 10-case priority matrix (Table~\ref{tab:decision}); (5)~intelligence merging of extracted entities; and (6)~action recommendations based on dominant labels.
+
+\begin{table}[h]
+\centering
+\caption{Decision Matrix for Cluster Classification}
+\label{tab:decision}
+\begin{tabular}{|c|l|l|l|}
+\hline
+\textbf{P} & \textbf{Case} & \textbf{Condition} & \textbf{Severity} \\
+\hline
+1 & Insufficient Data & Single tweet & UNKNOWN \\
+2 & Suspicious Source & Single author & UNKNOWN \\
+3 & Early Signal & $<$ 5 tweets & LOW \\
+4 & Location Uncertain & Mixed locations & UNCERTAIN \\
+5 & No Disaster & $\geq$ 80\% non-disaster & NONE \\
+6 & Low Confidence & Avg $<$ 50\% & UNCERTAIN \\
+7 & Ambiguous & Low agreement & MEDIUM \\
+8 & Active Event & Burst + high disaster & CRITICAL \\
+9 & Recovery Phase & Spread + recovery & MEDIUM \\
+10 & Confirmed Event & Meets thresholds & COMPUTED \\
+\hline
+\end{tabular}
+\end{table}
+
+For confirmed events, severity is scored based on tweet count, people affected, and damage reports, yielding CRITICAL, HIGH, MEDIUM, or LOW classifications.
+
+\section{Experimental Results}
+
+The model was fine-tuned with AdamW optimizer, learning rate $2 \times 10^{-5}$, batch size 32, 15 epochs, dropout 0.3, and max sequence length 128 tokens using cross-entropy loss. Evaluation on a held-out test set of 300 tweets is summarized in Tables~\ref{tab:overall_metrics} and~\ref{tab:class_metrics}.
+
+\begin{table}[h]
+\centering
+\caption{Overall Performance Metrics}
+\label{tab:overall_metrics}
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Metric} & \textbf{Score} \\
+\hline
+Accuracy & 87.0\% \\
+Macro F1-Score & 87.26\% \\
+Weighted F1-Score & 87.26\% \\
+Macro Precision & 88.15\% \\
+Macro Recall & 86.92\% \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Per-Class Performance}
+\label{tab:class_metrics}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Class} & \textbf{Prec.} & \textbf{Rec.} & \textbf{F1} & \textbf{Sup.} \\
+\hline
+Affected Individuals & 0.85 & 0.83 & 0.84 & 58 \\
+Infrastructure Damage & 0.90 & 0.88 & 0.89 & 62 \\
+Not Humanitarian & 0.92 & 0.94 & 0.93 & 65 \\
+Other Information & 0.83 & 0.85 & 0.84 & 55 \\
+Rescue/Donation & 0.91 & 0.85 & 0.88 & 60 \\
+\hline
+\end{tabular}
+\end{table}
+
+The mean confidence score is 0.89 (median 0.93), with 78\% of predictions exceeding the 0.70 HITL threshold for automatic acceptance. The NLP extraction module achieves coverage rates of 72\% for locations, 55\% for damage types, 48\% for resource needs, 41\% for time mentions, and 34\% for people counts.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\linewidth]{fig_confusion_matrix_labeled.png}
+\caption{Confusion matrix showing classification performance across all categories.}
+\label{fig:confusion}
+\end{figure}
+
+\section{Comparative Study}
+
+Table~\ref{tab:comparison} compares the adopted DeLTran15 model with existing approaches. The system achieves competitive performance while incorporating explainability, HITL validation, and geospatial analysis.
+
+\begin{table*}[t]
+\centering
+\caption{Comparative Analysis of Disaster Tweet Classification Methods}
+\label{tab:comparison}
+\begin{tabular}{|c|l|c|l|c|c|}
+\hline
+\textbf{\#} & \textbf{Model} & \textbf{Year} & \textbf{Approach} & \textbf{Accuracy} & \textbf{Macro F1} \\
+\hline
+1 & Na\"{i}ve Bayes & 2017 & Traditional ML & $\sim$0.62 & 0.59 \\
+2 & SVM (TF-IDF) & 2018 & Traditional ML & $\sim$0.66 & 0.63 \\
+3 & FastText & 2019 & Embedding & 0.76 & 0.794 \\
+4 & CNN & 2020 & Deep Learning & 0.80 & 0.842 \\
+5 & LSTM & 2020 & Deep Learning & 0.78 & 0.803 \\
+6 & Bi-LSTM & 2021 & Deep Learning & 0.80 & 0.820 \\
+7 & IDBO CNN-BiLSTM & 2025 & Hybrid DL & 0.803 & 0.798 \\
+8 & DistilBERT & 2021 & Transformer & 0.84 & 0.863 \\
+9 & BERT (base) & 2021 & Transformer & 0.87 & 0.879 \\
+10 & BERTweet & 2022 & Tweet Transformer & 0.85 & 0.855 \\
+11 & RoBERTa & 2021 & Transformer & 0.87 & 0.870 \\
+12 & CrisisTransformers & 2025 & Domain Transformer & 0.861 & 0.847 \\
+13 & He \& Hu Framework & 2025 & BERT + Geo & -- & 0.814 \\
+14 & \textbf{DeLTran15 (Ours)} & 2025 & XAI + HITL + Geo & \textbf{0.87} & \textbf{0.8726} \\
+\hline
+\end{tabular}
+\end{table*}
+
+The adopted DeLTran15 model achieves performance comparable to RoBERTa while maintaining approximately 22M parameters compared to over 300M in larger models. The integration of XAI, HITL, and geospatial aggregation provides enhanced interpretability and real-world applicability for disaster response scenarios. The system is implemented using PyTorch and HuggingFace Transformers for inference, spaCy for NLP extraction, CustomTkinter for the desktop interface, Node.js with Express for backend services, and MongoDB for storage, with all inference executed locally ensuring data privacy and offline capability.
+
+\section{Conclusion and Future Work}
+
+This paper presented a comprehensive disaster tweet classification system built upon the DeLTran15 model \cite{ref16} that addresses limitations of existing approaches through multi-class categorization, explainable predictions, actionable intelligence extraction, human verification, and geospatial temporal aggregation. The system achieves \textbf{87.0\% accuracy} and \textbf{87.26\% macro F1-score} across five humanitarian categories, while providing location-level situation reports through a \textit{10-case decision matrix}. The privacy-first architecture ensures all AI processing runs locally, making the system suitable for sensitive disaster response environments.
+
+Future work includes exploring larger transformer architectures (e.g., DeBERTa) for improved accuracy, incorporating sequential tweet analysis for temporal trend detection, extending to multi-modal classification with images and videos, integrating real-time Twitter streaming, and adapting to multilingual tweets using models such as mBERT and XLM-R.
+
+\begin{thebibliography}{16}
+
+\bibitem{ref1}
+M. Imran, C. Castillo, F. Diaz, and S. Vieweg, ``Processing social media messages in mass emergency: A survey,'' \textit{ACM Computing Surveys}, vol. 47, no. 4, pp. 1--38, 2015.
+
+\bibitem{ref2}
+A. Olteanu, C. Castillo, F. Diaz, and S. Vieweg, ``CrisisLex: A Lexicon for Collecting and Filtering Microblogged Communications in Crises,'' in \textit{Proc. AAAI ICWSM}, 2014.
+
+\bibitem{ref3}
+K. M. Stowe, M. Paul, M. Palmer, L. Palen, and K. Anderson, ``Identifying and Categorizing Disaster-Related Tweets,'' in \textit{Proc. 4th Int. Workshop NLP for Social Media}, 2016, pp. 1--6.
+
+\bibitem{ref4}
+M. Imran, S. Elbassuoni, C. Castillo, F. Diaz, and P. Meier, ``Extracting information nuggets from disaster-related messages in social media,'' in \textit{Proc. ISCRAM}, 2013.
+
+\bibitem{ref5}
+F. Alam, F. Ofli, and M. Imran, ``CrisisMMD: Multimodal Twitter Datasets from Natural Disasters,'' in \textit{Proc. ICWSM}, 2018.
+
+\bibitem{ref6}
+J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, ``BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding,'' in \textit{Proc. NAACL-HLT}, 2019, pp. 4171--4186.
+
+\bibitem{ref7}
+Y. Liu, M. Ott, N. Goyal, et al., ``RoBERTa: A Robustly Optimized BERT Pretraining Approach,'' \textit{arXiv:1907.11692}, 2019.
+
+\bibitem{ref8}
+M. T. Ribeiro, S. Singh, and C. Guestrin, ``Why Should I Trust You?: Explaining the Predictions of Any Classifier,'' in \textit{Proc. ACM SIGKDD}, 2016, pp. 1135--1144.
+
+\bibitem{ref9}
+S. M. Lundberg and S.-I. Lee, ``A Unified Approach to Interpreting Model Predictions,'' in \textit{NeurIPS}, vol. 30, 2017.
+
+\bibitem{ref10}
+M. Sundararajan, A. Taly, and Q. Yan, ``Axiomatic Attribution for Deep Networks,'' in \textit{Proc. ICML}, 2017, pp. 3319--3328.
+
+\bibitem{ref11}
+S. Jain and B. C. Wallace, ``Attention is not Explanation,'' in \textit{Proc. NAACL-HLT}, 2019, pp. 3543--3556.
+
+\bibitem{ref12}
+J. P. De Albuquerque, B. Herfort, A. Brenning, and A. Zipf, ``A geographic approach for combining social media and authoritative data towards identifying useful information for disaster management,'' \textit{Int. J. Geographical Information Science}, vol. 29, no. 4, pp. 667--689, 2015.
+
+\bibitem{ref13}
+S. E. Middleton, L. Middleton, and S. Modafferi, ``Real-Time Crisis Mapping of Natural Disasters Using Social Media,'' \textit{IEEE Intelligent Systems}, vol. 29, no. 2, pp. 9--17, 2014.
+
+\bibitem{ref14}
+S. Branson, C. Wah, F. Schroff, et al., ``Visual Recognition with Humans in the Loop,'' in \textit{Proc. ECCV}, 2010, pp. 438--451.
+
+\bibitem{ref15}
+R. Monarch, \textit{Human-in-the-Loop Machine Learning}, Manning Publications, 2021.
+
+\bibitem{ref16}
+S. Saleem, N. Hasan, A. Khattar, P. R. Jain, T. K. Gupta, and M. Mehrotra, 
+``DeLTran15: A Deep Lightweight Transformer-Based Framework for Multiclass Classification of Disaster Posts on X.''
+
+\end{thebibliography}
+
+\end{document}

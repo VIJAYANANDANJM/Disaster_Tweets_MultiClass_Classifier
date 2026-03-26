@@ -1,7 +1,17 @@
 import torch
+import os
+import sys
 from transformers import AutoTokenizer
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 from Explainable_AI import explain_prediction
-from model import DeLTran15   
+from Model import DeLTran15   
 
 # -------------------------------
 # 1. CONFIG
@@ -10,18 +20,22 @@ MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 MODEL_PATH = "deltran15_minilm_fp32.pt"
 TOKENIZER_PATH = "Model_Tokenizer"
 
+MODEL_FILE = os.path.join(current_dir, MODEL_PATH)
+TOKENIZER_DIR = os.path.join(current_dir, TOKENIZER_PATH)
+
 # -------------------------------
 # 2. LOAD TOKENIZER
 # -------------------------------
-tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_PATH)
+tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_DIR, local_files_only=True)
 
 # -------------------------------
 # 3. LOAD MODEL
 # -------------------------------
-model = DeLTran15(MODEL_NAME)
+model = DeLTran15(MODEL_NAME, local_files_only=True)
 model.load_state_dict(
-    torch.load(MODEL_PATH, map_location="cpu")
+    torch.load(MODEL_FILE, map_location="cpu")
 )
+model.to("cpu")
 model.eval()
 
 # -------------------------------
@@ -53,9 +67,11 @@ def predict(text):
             enc["attention_mask"]
         )
         probs = torch.softmax(logits, dim=1)
-        pred = torch.argmax(probs, dim=1).item()
+        if probs.device.type == "meta":
+            raise RuntimeError("Model output is on the meta device; weights were not materialized correctly.")
+        pred = int(torch.argmax(probs, dim=1).detach().cpu().item())
 
-    return pred, probs.squeeze().tolist()
+    return pred, probs.squeeze(0).detach().cpu().tolist()
 
 # -------------------------------
 # 6. TEST

@@ -8,8 +8,17 @@ from typing import List, Dict, Optional, Any
 
 def _make_json_serializable(obj: Any) -> Any:
     """Convert numpy/torch float32 and similar types to JSON-serializable Python types."""
+    if hasattr(obj, 'detach') and hasattr(obj, 'cpu'):
+        try:
+            tensor = obj.detach().cpu()
+            return tensor.item() if tensor.numel() == 1 else tensor.tolist()
+        except Exception:
+            pass
     if hasattr(obj, 'item'):  # numpy scalar or torch tensor
-        return obj.item()
+        try:
+            return obj.item()
+        except Exception:
+            pass
     if isinstance(obj, float):
         return float(obj)
     if isinstance(obj, (list, tuple)):
